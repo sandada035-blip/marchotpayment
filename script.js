@@ -9,6 +9,7 @@ const state = {
   },
   recent: [],
   records: [],
+  reportRows: [],
   deferredPrompt: null
 };
 
@@ -38,7 +39,16 @@ const els = {
   refreshBtn: document.getElementById("refreshBtn"),
   installBtn: document.getElementById("installBtn"),
   menuBtn: document.getElementById("menuBtn"),
-  sidebar: document.getElementById("sidebar")
+  sidebar: document.getElementById("sidebar"),
+  reportDate: document.getElementById("reportDate"),
+  reportTeacher: document.getElementById("reportTeacher"),
+  previewReportBtn: document.getElementById("previewReportBtn"),
+  printDailyBtn: document.getElementById("printDailyBtn"),
+  reportTableBody: document.getElementById("reportTableBody"),
+  reportCount: document.getElementById("reportCount"),
+  reportMonthlyFee: document.getElementById("reportMonthlyFee"),
+  report80: document.getElementById("report80"),
+  report20: document.getElementById("report20")
 };
 
 document.addEventListener("DOMContentLoaded", init);
@@ -48,6 +58,15 @@ function init() {
   bindEvents();
   registerSW();
   updateApiStatus();
+
+  const today = new Date().toISOString().slice(0, 10);
+  if (els.reportDate) els.reportDate.value = today;
+  if (document.getElementById("invoiceDate")) {
+    document.getElementById("invoiceDate").value = today;
+  }
+  if (document.getElementById("startDate")) {
+    document.getElementById("startDate").value = today;
+  }
 
   if (state.apiUrl) {
     bootstrapData();
@@ -65,19 +84,24 @@ function bindEvents() {
     btn.addEventListener("click", () => switchView(btn.dataset.go));
   });
 
-  els.saveSettingsBtn.addEventListener("click", saveSettings);
-  els.testConnectionBtn.addEventListener("click", testConnection);
-  els.paymentForm.addEventListener("submit", submitPaymentForm);
-  els.resetFormBtn.addEventListener("click", resetForm);
-  els.searchBtn.addEventListener("click", renderRecordsTable);
-  els.filterTeacher.addEventListener("change", renderRecordsTable);
-  els.refreshBtn.addEventListener("click", bootstrapData);
-  els.menuBtn.addEventListener("click", () => els.sidebar.classList.toggle("open"));
+  els.saveSettingsBtn?.addEventListener("click", saveSettings);
+  els.testConnectionBtn?.addEventListener("click", testConnection);
+  els.paymentForm?.addEventListener("submit", submitPaymentForm);
+  els.resetFormBtn?.addEventListener("click", resetForm);
+  els.searchBtn?.addEventListener("click", renderRecordsTable);
+  els.filterTeacher?.addEventListener("change", renderRecordsTable);
+  els.refreshBtn?.addEventListener("click", bootstrapData);
+  els.menuBtn?.addEventListener("click", () => els.sidebar.classList.toggle("open"));
 
   const monthlyFeeEl = document.getElementById("monthlyFee");
   const daysEl = document.getElementById("days");
   if (monthlyFeeEl) monthlyFeeEl.addEventListener("input", autoCalculateSplit);
   if (daysEl) daysEl.addEventListener("input", autoCalculateDailyPrice);
+
+  els.previewReportBtn?.addEventListener("click", previewDailyReport);
+  els.printDailyBtn?.addEventListener("click", printDailyReport);
+  els.reportTeacher?.addEventListener("change", previewDailyReport);
+  els.reportDate?.addEventListener("change", previewDailyReport);
 
   window.addEventListener("beforeinstallprompt", e => {
     e.preventDefault();
@@ -85,7 +109,7 @@ function bindEvents() {
     els.installBtn.classList.remove("hidden");
   });
 
-  els.installBtn.addEventListener("click", async () => {
+  els.installBtn?.addEventListener("click", async () => {
     if (!state.deferredPrompt) return;
     state.deferredPrompt.prompt();
     await state.deferredPrompt.userChoice;
@@ -99,6 +123,7 @@ function switchView(viewName) {
     dashboard: "Dashboard",
     payments: "បញ្ចូលការបង់ប្រាក់",
     records: "កែទិន្នន័យ",
+    reports: "របាយការណ៍ប្រចាំថ្ងៃ",
     settings: "Settings"
   };
 
@@ -112,6 +137,10 @@ function switchView(viewName) {
 
   els.pageTitle.textContent = titles[viewName] || "Dashboard";
   els.sidebar.classList.remove("open");
+
+  if (viewName === "reports") {
+    previewDailyReport();
+  }
 }
 
 function saveSettings() {
@@ -179,6 +208,7 @@ async function bootstrapData() {
     fillTeacherSelects();
     renderDashboard();
     renderRecordsTable();
+    previewDailyReport();
     updateApiStatus(true);
   } catch (err) {
     console.error(err);
@@ -193,12 +223,21 @@ function fillTeacherSelects() {
     ...state.teachers.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`)
   ].join("");
 
-  els.teacherName.innerHTML = teacherOptions;
+  if (els.teacherName) els.teacherName.innerHTML = teacherOptions;
 
-  els.filterTeacher.innerHTML = [
-    '<option value="">គ្រូទាំងអស់</option>',
-    ...state.teachers.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`)
-  ].join("");
+  if (els.filterTeacher) {
+    els.filterTeacher.innerHTML = [
+      '<option value="">គ្រូទាំងអស់</option>',
+      ...state.teachers.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`)
+    ].join("");
+  }
+
+  if (els.reportTeacher) {
+    els.reportTeacher.innerHTML = [
+      '<option value="">គ្រូទាំងអស់</option>',
+      ...state.teachers.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`)
+    ].join("");
+  }
 }
 
 function renderDashboard() {
@@ -232,8 +271,8 @@ function renderDashboard() {
 }
 
 function renderRecordsTable() {
-  const teacher = (els.filterTeacher.value || "").trim();
-  const search = (els.searchInput.value || "").trim().toLowerCase();
+  const teacher = (els.filterTeacher?.value || "").trim();
+  const search = (els.searchInput?.value || "").trim().toLowerCase();
 
   let rows = [...state.records];
 
@@ -267,6 +306,153 @@ function renderRecordsTable() {
       </tr>
     `).join("")
     : `<tr><td colspan="9">មិនមានទិន្នន័យ</td></tr>`;
+}
+
+function previewDailyReport() {
+  const selectedDate = (els.reportDate?.value || "").trim();
+  const selectedTeacher = (els.reportTeacher?.value || "").trim();
+
+  let rows = [...state.records];
+
+  if (selectedDate) {
+    rows = rows.filter(r => normalizeDate(r.invoiceDate) === selectedDate);
+  }
+
+  if (selectedTeacher) {
+    rows = rows.filter(r => String(r.teacherName || "") === selectedTeacher);
+  }
+
+  rows.sort((a, b) => String(a.teacherName || "").localeCompare(String(b.teacherName || "")));
+
+  state.reportRows = rows;
+
+  const totalCount = rows.length;
+  const totalFee = rows.reduce((sum, r) => sum + moneyToNumber(r.monthlyFee), 0);
+  const total80 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid80), 0);
+  const total20 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid20), 0);
+
+  if (els.reportCount) els.reportCount.textContent = formatInt(totalCount);
+  if (els.reportMonthlyFee) els.reportMonthlyFee.textContent = formatKHR(totalFee);
+  if (els.report80) els.report80.textContent = formatKHR(total80);
+  if (els.report20) els.report20.textContent = formatKHR(total20);
+
+  if (els.reportTableBody) {
+    els.reportTableBody.innerHTML = rows.length
+      ? rows.map(r => `
+        <tr>
+          <td>${escapeHtml(r.studentName || "")}</td>
+          <td>${escapeHtml(r.gender || "")}</td>
+          <td>${escapeHtml(r.studentClass || "")}</td>
+          <td>${escapeHtml(r.teacherName || "")}</td>
+          <td>${formatKHR(r.monthlyFee)}</td>
+          <td>${formatKHR(r.paid80)}</td>
+          <td>${formatKHR(r.paid20)}</td>
+          <td>${escapeHtml(r.invoiceDate || "")}</td>
+        </tr>
+      `).join("")
+      : `<tr><td colspan="8">មិនមានទិន្នន័យសម្រាប់ថ្ងៃនេះ</td></tr>`;
+  }
+}
+
+function printDailyReport() {
+  const reportDate = els.reportDate?.value || "";
+  const teacherName = els.reportTeacher?.value || "";
+  const rows = state.reportRows || [];
+
+  if (!rows.length) {
+    showToast("មិនមានទិន្នន័យសម្រាប់ print");
+    return;
+  }
+
+  const totalFee = rows.reduce((sum, r) => sum + moneyToNumber(r.monthlyFee), 0);
+  const total80 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid80), 0);
+  const total20 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid20), 0);
+
+  const html = `
+    <html>
+      <head>
+        <title>Daily Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
+          h1, h2, h3, p { margin: 0 0 10px; }
+          .meta { margin-bottom: 18px; }
+          .summary { display: flex; gap: 16px; flex-wrap: wrap; margin: 18px 0; }
+          .box {
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 12px 16px;
+            min-width: 180px;
+          }
+          table { width: 100%; border-collapse: collapse; margin-top: 18px; }
+          th, td {
+            border: 1px solid #333;
+            padding: 8px;
+            text-align: left;
+            font-size: 14px;
+          }
+          th { background: #f3f4f6; }
+        </style>
+      </head>
+      <body class="print-area">
+        <h1>របាយការណ៍ប្រចាំថ្ងៃ</h1>
+        <div class="meta">
+          <p><strong>ថ្ងៃបង់ប្រាក់:</strong> ${escapeHtml(reportDate || "ទាំងអស់")}</p>
+          <p><strong>គ្រូ:</strong> ${escapeHtml(teacherName || "គ្រូទាំងអស់")}</p>
+        </div>
+
+        <div class="summary">
+          <div class="box"><strong>ចំនួនសិស្ស</strong><br>${formatInt(rows.length)}</div>
+          <div class="box"><strong>សរុបតម្លៃសិក្សា</strong><br>${formatKHR(totalFee)}</div>
+          <div class="box"><strong>សរុបប្រាក់គ្រូ 80%</strong><br>${formatKHR(total80)}</div>
+          <div class="box"><strong>សរុបប្រាក់សាលា 20%</strong><br>${formatKHR(total20)}</div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>ឈ្មោះសិស្ស</th>
+              <th>ភេទ</th>
+              <th>ថ្នាក់</th>
+              <th>គ្រូ</th>
+              <th>តម្លៃសិក្សា</th>
+              <th>80%</th>
+              <th>20%</th>
+              <th>ថ្ងៃបង់</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(r => `
+              <tr>
+                <td>${escapeHtml(r.studentName || "")}</td>
+                <td>${escapeHtml(r.gender || "")}</td>
+                <td>${escapeHtml(r.studentClass || "")}</td>
+                <td>${escapeHtml(r.teacherName || "")}</td>
+                <td>${formatKHR(r.monthlyFee)}</td>
+                <td>${formatKHR(r.paid80)}</td>
+                <td>${formatKHR(r.paid20)}</td>
+                <td>${escapeHtml(r.invoiceDate || "")}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </body>
+    </html>
+  `;
+
+  const printWindow = window.open("", "_blank", "width=1200,height=800");
+  if (!printWindow) {
+    showToast("Browser បានបិទ popup សម្រាប់ print");
+    return;
+  }
+
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
+
+  printWindow.focus();
+  setTimeout(() => {
+    printWindow.print();
+  }, 400);
 }
 
 function autoCalculateSplit() {
@@ -346,8 +532,9 @@ function getFormData() {
 }
 
 function resetForm() {
-  els.paymentForm.reset();
-  document.getElementById("recordId").value = "";
+  els.paymentForm?.reset();
+  const recordIdEl = document.getElementById("recordId");
+  if (recordIdEl) recordIdEl.value = "";
   const daysEl = document.getElementById("days");
   if (daysEl) daysEl.value = 30;
   els.submitBtn.textContent = "រក្សាទុក";
@@ -370,8 +557,8 @@ window.editRecord = function(recordId) {
   document.getElementById("paid20").value = r.paid20 || "";
   const dailyPriceEl = document.getElementById("dailyPrice");
   if (dailyPriceEl) dailyPriceEl.value = r.dailyPrice || "";
-  document.getElementById("startDate").value = r.startDate || "";
-  document.getElementById("invoiceDate").value = r.invoiceDate || "";
+  document.getElementById("startDate").value = normalizeDate(r.startDate) || "";
+  document.getElementById("invoiceDate").value = normalizeDate(r.invoiceDate) || "";
   document.getElementById("days").value = r.days || 30;
   const noteEl = document.getElementById("note");
   if (noteEl) noteEl.value = r.note || "";
@@ -440,6 +627,14 @@ function formatKHR(value) {
 
 function formatInt(value) {
   return moneyToNumber(value).toLocaleString();
+}
+
+function normalizeDate(value) {
+  if (!value) return "";
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value).trim();
+  return d.toISOString().slice(0, 10);
 }
 
 function showToast(message) {
