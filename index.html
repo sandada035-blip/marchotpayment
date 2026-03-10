@@ -15,7 +15,13 @@
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
       <div class="brand">
-        <img src="logo.png" alt="logo" class="brand-logo" />
+        <img
+          src="logo.png"
+          alt="School Pay Logo"
+          class="brand-logo"
+          id="brandLogo"
+          onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><defs><linearGradient id=%22g%22 x1=%220%22 x2=%221%22 y1=%220%22 y2=%221%22><stop offset=%220%25%22 stop-color=%22%233b82f6%22/><stop offset=%22100%25%22 stop-color=%22%2310b981%22/></linearGradient></defs><rect width=%22128%22 height=%22128%22 rx=%2228%22 fill=%22url(%23g)%22/><text x=%2264%22 y=%2276%22 font-size=%2248%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22>SP</text></svg>';"
+        />
         <div>
           <h1>School Pay</h1>
           <p>PWA Dashboard</p>
@@ -26,6 +32,7 @@
         <button class="nav-btn active" data-view="dashboard">Dashboard</button>
         <button class="nav-btn" data-view="payments">បញ្ចូលការបង់ប្រាក់</button>
         <button class="nav-btn" data-view="records">កែទិន្នន័យ</button>
+        <button class="nav-btn" data-view="reports">របាយការណ៍ប្រចាំថ្ងៃ</button>
         <button class="nav-btn" data-view="settings">Settings</button>
       </nav>
 
@@ -114,7 +121,7 @@
 
             <div class="field">
               <label for="gender">ភេទ</label>
-              <select id="gender" name="gender" required>
+              <select id="gender" name="gender" required class="dark-select">
                 <option value="">ជ្រើសរើស</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
@@ -128,7 +135,7 @@
 
             <div class="field">
               <label for="teacherName">ឈ្មោះគ្រូ / Sheet</label>
-              <select id="teacherName" name="teacherName" required>
+              <select id="teacherName" name="teacherName" required class="dark-select">
                 <option value="">ជ្រើសរើសគ្រូ</option>
               </select>
             </div>
@@ -186,7 +193,7 @@
           <div class="panel-head filter-head">
             <h3>កែទិន្នន័យលើ Web App</h3>
             <div class="filter-row">
-              <select id="filterTeacher">
+              <select id="filterTeacher" class="dark-select">
                 <option value="">គ្រូទាំងអស់</option>
               </select>
               <input type="text" id="searchInput" placeholder="ស្វែងរកឈ្មោះសិស្ស..." />
@@ -210,6 +217,59 @@
                 </tr>
               </thead>
               <tbody id="recordsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="reportsView">
+        <div class="panel">
+          <div class="panel-head filter-head">
+            <h3>របាយការណ៍ប្រចាំថ្ងៃ</h3>
+            <div class="filter-row">
+              <input type="date" id="reportDate" />
+              <select id="reportTeacher" class="dark-select">
+                <option value="">គ្រូទាំងអស់</option>
+              </select>
+              <button class="secondary-btn" id="previewReportBtn">Preview</button>
+              <button class="primary-btn" id="printDailyBtn">Print Daily Report</button>
+            </div>
+          </div>
+
+          <div class="stats-grid report-stats">
+            <div class="stat-card">
+              <span>ចំនួនសិស្ស</span>
+              <strong id="reportCount">0</strong>
+            </div>
+            <div class="stat-card">
+              <span>សរុបតម្លៃសិក្សា</span>
+              <strong id="reportMonthlyFee">0</strong>
+            </div>
+            <div class="stat-card">
+              <span>សរុបប្រាក់គ្រូ 80%</span>
+              <strong id="report80">0</strong>
+            </div>
+            <div class="stat-card">
+              <span>សរុបប្រាក់សាលា 20%</span>
+              <strong id="report20">0</strong>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ឈ្មោះសិស្ស</th>
+                  <th>ភេទ</th>
+                  <th>ថ្នាក់</th>
+                  <th>គ្រូ</th>
+                  <th>តម្លៃសិក្សា</th>
+                  <th>80%</th>
+                  <th>20%</th>
+                  <th>ថ្ងៃបង់</th>
+                </tr>
+              </thead>
+              <tbody id="reportTableBody"></tbody>
             </table>
           </div>
         </div>
