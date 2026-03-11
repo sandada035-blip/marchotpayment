@@ -368,8 +368,15 @@ window.deleteRecord = async function(recordId) {
 
 // --- API Helpers ---
 async function apiGet(queryString) {
-  const res = await fetch(`${state.apiUrl}?${queryString}`);
-  if (!res.ok) throw new Error("Network response was not ok");
+  const separator = state.apiUrl.includes("?") ? "&" : "?";
+  const url = `${state.apiUrl}${separator}${queryString}&_ts=${Date.now()}`;
+
+  const res = await fetch(url, {
+    method: "GET",
+    cache: "no-store"
+  });
+
+  if (!res.ok) throw new Error("API GET error");
   return res.json();
 }
 
@@ -432,6 +439,7 @@ function escapeJs(s) {
 function registerSW() {
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(console.error);
 }
+
 
 
 
