@@ -1,5 +1,5 @@
-const CACHE_NAME = "student-payment-pwa-v3";
-const ASSETS = [
+const CACHE_NAME = "student-payment-pwa-v4";
+const APP_SHELL = [
   "./",
   "./index.html",
   "./style.css",
@@ -8,33 +8,85 @@ const ASSETS = [
   "./logo.png"
 ];
 
-self.addEventListener("install", event => {
+const API_HOSTS = [
+  "script.google.com",
+  "script.googleusercontent.com"
+];
+
+self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
   );
   self.skipWaiting();
 });
 
-self.addEventListener("activate", event => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.map(key => key !== CACHE_NAME ? caches.delete(key) : null))
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) return caches.delete(key);
+          return Promise.resolve();
+        })
+      )
     )
   );
   self.clients.claim();
 });
 
-self.addEventListener("fetch", event => {
-  if (event.request.method !== "GET") return;
+self.addEventListener("fetch", (event) => {
+  const request = event.request;
+  const url = new URL(request.url);
 
+  if (request.method !== "GET") return;
+
+  // កុំ cache API data ពី Google Apps Script
+  if (API_HOSTS.includes(url.hostname)) {
+    event.respondWith(
+      fetch(request, { cache: "no-store" }).catch(() => {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "Offline or API unavailable"
+          }),
+          {
+            status: 503,
+            headers: { "Content-Type": "application/json" }
+          }
+        );
+      })
+    );
+    return;
+  }
+
+  // HTML page => network first
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put("./index.html", clone));
+          return response;
+        })
+        .catch(() => caches.match("./index.html"))
+    );
+    return;
+  }
+
+  // Static assets => cache first
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      return cached || fetch(event.request).then(response => {
-        const cloned = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, cloned));
+    caches.match(request).then((cached) => {
+      if (cached) return cached;
+
+      return fetch(request).then((response) => {
+        if (!response || response.status !== 200 || response.type === "opaque") {
+          return response;
+        }
+
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         return response;
-      }).catch(() => caches.match("./index.html"));
+      });
     })
   );
-
 });
