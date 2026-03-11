@@ -19,7 +19,6 @@
           src="logo.png"
           alt="School Pay Logo"
           class="brand-logo"
-          id="brandLogo"
           onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><defs><linearGradient id=%22g%22 x1=%220%22 x2=%221%22 y1=%220%22 y2=%221%22><stop offset=%220%25%22 stop-color=%22%233b82f6%22/><stop offset=%22100%25%22 stop-color=%22%2310b981%22/></linearGradient></defs><rect width=%22128%22 height=%22128%22 rx=%2228%22 fill=%22url(%23g)%22/><text x=%2264%22 y=%2276%22 font-size=%2248%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22>SP</text></svg>';"
         />
         <div>
@@ -33,6 +32,7 @@
         <button class="nav-btn" data-view="payments">បញ្ចូលការបង់ប្រាក់</button>
         <button class="nav-btn" data-view="records">កែទិន្នន័យ</button>
         <button class="nav-btn" data-view="reports">របាយការណ៍ប្រចាំថ្ងៃ</button>
+        <button class="nav-btn" data-view="monthly">របាយការណ៍ប្រចាំខែ</button>
       </nav>
 
       <div class="sidebar-footer">
@@ -48,18 +48,19 @@
           <h2 id="pageTitle">Dashboard</h2>
         </div>
         <div class="topbar-actions">
-          <span class="status-pill" id="apiStatus">API: Connected</span>
+          <span class="status-pill" id="apiStatus">API: Ready</span>
           <button class="primary-btn" id="refreshBtn">Refresh</button>
         </div>
       </header>
 
+      <!-- Dashboard -->
       <section class="view active" id="dashboardView">
         <div class="hero-card">
           <div>
             <p class="eyebrow">សូមស្វាគមន៍</p>
             <h3>ផ្ទាំងគ្រប់គ្រងការបង់ប្រាក់សិស្ស</h3>
             <p class="muted">
-              បញ្ចូល កែសម្រួល និងតាមដានការបង់ប្រាក់សិស្សតាមគ្រូនីមួយៗ។
+              បញ្ចូល កែសម្រួល ស្វែងរក បោះពុម្ពរបាយការណ៍ និងតាមដានស្ថិតិការបង់ប្រាក់សិស្ស។
             </p>
           </div>
           <div class="hero-actions">
@@ -87,7 +88,32 @@
           </div>
         </div>
 
-        <div class="panel-grid">
+        <div class="panel">
+          <div class="panel-head filter-head">
+            <h3>Dashboard Chart</h3>
+            <div class="filter-row">
+              <select id="chartType" class="dark-select">
+                <option value="teacher">តាមគ្រូ</option>
+                <option value="daily">តាមថ្ងៃបង់</option>
+              </select>
+
+              <select id="chartMetric" class="dark-select">
+                <option value="monthlyFee">តម្លៃសិក្សា</option>
+                <option value="paid80">ប្រាក់គ្រូ 80%</option>
+                <option value="paid20">ប្រាក់សាលា 20%</option>
+                <option value="count">ចំនួនសិស្ស</option>
+              </select>
+
+              <button class="secondary-btn" id="refreshChartBtn">Refresh Chart</button>
+            </div>
+          </div>
+
+          <div style="background:#fff;border-radius:18px;padding:16px;">
+            <canvas id="dashboardChart" height="100"></canvas>
+          </div>
+        </div>
+
+        <div class="panel-grid" style="margin-top:18px;">
           <section class="panel">
             <div class="panel-head">
               <h3>Teacher Sheets</h3>
@@ -104,6 +130,7 @@
         </div>
       </section>
 
+      <!-- Payment Form -->
       <section class="view" id="paymentsView">
         <div class="panel">
           <div class="panel-head">
@@ -187,6 +214,7 @@
         </div>
       </section>
 
+      <!-- Records -->
       <section class="view" id="recordsView">
         <div class="panel">
           <div class="panel-head filter-head">
@@ -196,7 +224,6 @@
                 <option value="">គ្រូទាំងអស់</option>
               </select>
               <input type="text" id="searchInput" placeholder="ស្វែងរកឈ្មោះសិស្ស..." />
-              <button class="secondary-btn" id="searchBtn">ស្វែងរក</button>
             </div>
           </div>
 
@@ -221,6 +248,7 @@
         </div>
       </section>
 
+      <!-- Daily Report -->
       <section class="view" id="reportsView">
         <div class="panel">
           <div class="panel-head filter-head">
@@ -273,10 +301,66 @@
           </div>
         </div>
       </section>
+
+      <!-- Monthly Report -->
+      <section class="view" id="monthlyView">
+        <div class="panel">
+          <div class="panel-head filter-head">
+            <h3>របាយការណ៍ប្រចាំខែ</h3>
+            <div class="filter-row">
+              <input type="month" id="monthlyReportMonth" />
+              <select id="monthlyTeacher" class="dark-select">
+                <option value="">គ្រូទាំងអស់</option>
+              </select>
+              <button class="secondary-btn" id="previewMonthlyBtn">Preview</button>
+              <button class="primary-btn" id="printMonthlyBtn">Print Monthly Report</button>
+            </div>
+          </div>
+
+          <div class="stats-grid report-stats">
+            <div class="stat-card">
+              <span>ចំនួនសិស្ស</span>
+              <strong id="monthlyCount">0</strong>
+            </div>
+            <div class="stat-card">
+              <span>សរុបតម្លៃសិក្សា</span>
+              <strong id="monthlyFeeTotal">0</strong>
+            </div>
+            <div class="stat-card">
+              <span>សរុបប្រាក់គ្រូ 80%</span>
+              <strong id="monthly80">0</strong>
+            </div>
+            <div class="stat-card">
+              <span>សរុបប្រាក់សាលា 20%</span>
+              <strong id="monthly20">0</strong>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ឈ្មោះសិស្ស</th>
+                  <th>ភេទ</th>
+                  <th>ថ្នាក់</th>
+                  <th>គ្រូ</th>
+                  <th>តម្លៃសិក្សា</th>
+                  <th>80%</th>
+                  <th>20%</th>
+                  <th>ថ្ងៃបង់</th>
+                </tr>
+              </thead>
+              <tbody id="monthlyTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
   <div id="toast" class="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
