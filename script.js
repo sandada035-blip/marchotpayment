@@ -1,15 +1,13 @@
-/**
- * School Pay Dashboard - Frontend Script
- * ធានាភាពស៊ីគ្នាជាមួយ Google Apps Script ថ្មី
- */
-
-// ប្តូរ URL នេះជាមួយ Web App URL ថ្មីរបស់អ្នកក្រោយពេល Deploy ក្នុង Apps Script
-const API_URL = "https://script.google.com/macros/s/AKfycbzdBQUfTR7CaxOF9f5qYT2etzogQjz1zJeyn6aqfmJfzwX-9SnZB2vsm_V578bNHo7fFw/exec";
-
+const API_URL = "https://script.google.com/macros/s/AKfycby1fD9n9I4zNujCg3OpSEBb834aTHBxjGXj5H4WhA1IpG-BrnZQ5O874q6l7W6xOcpJ7A/exec";
 const state = {
   apiUrl: API_URL,
   teachers: [],
-  summary: { teacherCount: 0, recordCount: 0, total80: 0, total20: 0 },
+  summary: {
+    teacherCount: 0,
+    recordCount: 0,
+    total80: 0,
+    total20: 0
+  },
   recent: [],
   records: [],
   reportRows: [],
@@ -87,11 +85,11 @@ function init() {
   if (invoiceDateEl) invoiceDateEl.value = today;
   if (startDateEl) startDateEl.value = today;
 
-  if (state.apiUrl && state.apiUrl.includes("script.google.com")) {
+  if (state.apiUrl) {
     bootstrapData();
   } else {
     updateApiStatus(false);
-    showToast("សូមដាក់ API URL ដែលត្រឹមត្រូវក្នុង script.js");
+    showToast("សូមដាក់ API URL ក្នុង script.js");
   }
 }
 
@@ -133,7 +131,7 @@ function bindEvents() {
   window.addEventListener("beforeinstallprompt", e => {
     e.preventDefault();
     state.deferredPrompt = e;
-    els.installBtn?.classList.remove("hidden");
+    els.installBtn.classList.remove("hidden");
   });
 
   els.installBtn?.addEventListener("click", async () => {
@@ -175,6 +173,7 @@ function updateApiStatus(connected = null) {
     els.apiStatus.textContent = "API: Missing";
     return;
   }
+
   if (connected === true) {
     els.apiStatus.textContent = "API: Connected";
   } else if (connected === false) {
@@ -185,7 +184,8 @@ function updateApiStatus(connected = null) {
 }
 
 async function bootstrapData() {
-  updateApiStatus(null);
+  if (!state.apiUrl) return;
+
   try {
     const data = await apiGet("action=init");
     if (!data.success) throw new Error(data.message || "Init failed");
@@ -198,25 +198,45 @@ async function bootstrapData() {
     fillTeacherSelects();
     renderDashboard();
     renderRecordsTable();
+    previewDailyReport();
+    previewMonthlyReport();
     renderDashboardChart();
     updateApiStatus(true);
   } catch (err) {
     console.error(err);
     updateApiStatus(false);
-    showToast("បញ្ហាទាញទិន្នន័យ៖ " + err.message);
+    showToast(err.message || "មានបញ្ហាក្នុងការទាញទិន្នន័យ");
   }
 }
 
 function fillTeacherSelects() {
-  const options = [
+  const teacherOptions = [
     '<option value="">ជ្រើសរើសគ្រូ</option>',
     ...state.teachers.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`)
   ].join("");
 
-  if (els.teacherName) els.teacherName.innerHTML = options;
-  if (els.filterTeacher) els.filterTeacher.innerHTML = '<option value="">គ្រូទាំងអស់</option>' + state.teachers.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`).join("");
-  if (els.reportTeacher) els.reportTeacher.innerHTML = '<option value="">គ្រូទាំងអស់</option>' + state.teachers.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`).join("");
-  if (els.monthlyTeacher) els.monthlyTeacher.innerHTML = '<option value="">គ្រូទាំងអស់</option>' + state.teachers.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`).join("");
+  if (els.teacherName) els.teacherName.innerHTML = teacherOptions;
+
+  if (els.filterTeacher) {
+    els.filterTeacher.innerHTML = [
+      '<option value="">គ្រូទាំងអស់</option>',
+      ...state.teachers.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`)
+    ].join("");
+  }
+
+  if (els.reportTeacher) {
+    els.reportTeacher.innerHTML = [
+      '<option value="">គ្រូទាំងអស់</option>',
+      ...state.teachers.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`)
+    ].join("");
+  }
+
+  if (els.monthlyTeacher) {
+    els.monthlyTeacher.innerHTML = [
+      '<option value="">គ្រូទាំងអស់</option>',
+      ...state.teachers.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`)
+    ].join("");
+  }
 }
 
 function renderDashboard() {
@@ -230,20 +250,20 @@ function renderDashboard() {
       <div class="teacher-item">
         <div>
           <strong>${escapeHtml(t.name)}</strong>
-          <div class="muted">${formatInt(t.count || 0)} នាក់</div>
+          <div class="muted">${formatInt(t.count || 0)} records</div>
         </div>
         <span class="badge">Sheet</span>
       </div>
     `).join("")
-    : `<div class="teacher-item">មិនទាន់មានទិន្នន័យគ្រូ</div>`;
+    : `<div class="teacher-item">មិនទាន់មាន Teacher Sheets</div>`;
 
   els.recentRecords.innerHTML = state.recent.length
     ? state.recent.map(r => `
       <div class="recent-item">
         <strong>${escapeHtml(r.studentName || "")}</strong>
         <div class="muted">${escapeHtml(r.teacherName || "")}</div>
-        <div>${formatKHR(r.monthlyFee)} | 80%: ${formatKHR(r.paid80)}</div>
-        <div class="muted">ថ្ងៃបង់៖ ${escapeHtml(r.invoiceDate || "")}</div>
+        <div>${formatKHR(r.monthlyFee)} | 80%: ${formatKHR(r.paid80)} | 20%: ${formatKHR(r.paid20)}</div>
+        <div class="muted">ថ្នាក់: ${escapeHtml(r.studentClass || "")} | ថ្ងៃបង់: ${escapeHtml(r.invoiceDate || "")}</div>
       </div>
     `).join("")
     : `<div class="recent-item">មិនទាន់មានកំណត់ត្រា</div>`;
@@ -254,8 +274,14 @@ function renderRecordsTable() {
   const search = (els.searchInput?.value || "").trim().toLowerCase();
 
   let rows = [...state.records];
-  if (teacher) rows = rows.filter(r => String(r.teacherName || "") === teacher);
-  if (search) rows = rows.filter(r => String(r.studentName || "").toLowerCase().includes(search));
+
+  if (teacher) {
+    rows = rows.filter(r => String(r.teacherName || "") === teacher);
+  }
+
+  if (search) {
+    rows = rows.filter(r => String(r.studentName || "").toLowerCase().includes(search));
+  }
 
   rows.sort((a, b) => new Date(b.invoiceDate || 0) - new Date(a.invoiceDate || 0));
 
@@ -273,7 +299,8 @@ function renderRecordsTable() {
         <td>
           <div class="table-actions">
             <button class="small-btn edit-btn" onclick="editRecord('${escapeJs(r.recordId)}')">Edit</button>
-            <button class="small-btn delete-btn" onclick="deleteRecord('${escapeJs(r.recordId)}')">Del</button>
+            <button class="small-btn secondary-btn" onclick="exportInvoicePdf('${escapeJs(r.recordId)}')">PDF</button>
+            <button class="small-btn delete-btn" onclick="deleteRecord('${escapeJs(r.recordId)}')">Delete</button>
           </div>
         </td>
       </tr>
@@ -281,10 +308,379 @@ function renderRecordsTable() {
     : `<tr><td colspan="9">មិនមានទិន្នន័យ</td></tr>`;
 }
 
+function previewDailyReport() {
+  const selectedDate = (els.reportDate?.value || "").trim();
+  const selectedTeacher = (els.reportTeacher?.value || "").trim();
+
+  let rows = [...state.records];
+
+  if (selectedDate) {
+    rows = rows.filter(r => normalizeDate(r.invoiceDate) === selectedDate);
+  }
+
+  if (selectedTeacher) {
+    rows = rows.filter(r => String(r.teacherName || "") === selectedTeacher);
+  }
+
+  rows.sort((a, b) => String(a.teacherName || "").localeCompare(String(b.teacherName || "")));
+  state.reportRows = rows;
+
+  const totalCount = rows.length;
+  const totalFee = rows.reduce((sum, r) => sum + moneyToNumber(r.monthlyFee), 0);
+  const total80 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid80), 0);
+  const total20 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid20), 0);
+
+  if (els.reportCount) els.reportCount.textContent = formatInt(totalCount);
+  if (els.reportMonthlyFee) els.reportMonthlyFee.textContent = formatKHR(totalFee);
+  if (els.report80) els.report80.textContent = formatKHR(total80);
+  if (els.report20) els.report20.textContent = formatKHR(total20);
+
+  if (els.reportTableBody) {
+    els.reportTableBody.innerHTML = rows.length
+      ? rows.map(r => `
+        <tr>
+          <td>${escapeHtml(r.studentName || "")}</td>
+          <td>${escapeHtml(r.gender || "")}</td>
+          <td>${escapeHtml(r.studentClass || "")}</td>
+          <td>${escapeHtml(r.teacherName || "")}</td>
+          <td>${formatKHR(r.monthlyFee)}</td>
+          <td>${formatKHR(r.paid80)}</td>
+          <td>${formatKHR(r.paid20)}</td>
+          <td>${escapeHtml(r.invoiceDate || "")}</td>
+        </tr>
+      `).join("")
+      : `<tr><td colspan="8">មិនមានទិន្នន័យសម្រាប់ថ្ងៃនេះ</td></tr>`;
+  }
+}
+
+function previewMonthlyReport() {
+  const selectedMonth = (els.monthlyReportMonth?.value || "").trim();
+  const selectedTeacher = (els.monthlyTeacher?.value || "").trim();
+
+  let rows = [...state.records];
+
+  if (selectedMonth) {
+    rows = rows.filter(r => {
+      const d = normalizeDate(r.invoiceDate);
+      return d && d.slice(0, 7) === selectedMonth;
+    });
+  }
+
+  if (selectedTeacher) {
+    rows = rows.filter(r => String(r.teacherName || "") === selectedTeacher);
+  }
+
+  rows.sort((a, b) => new Date(a.invoiceDate || 0) - new Date(b.invoiceDate || 0));
+  state.monthlyRows = rows;
+
+  const totalCount = rows.length;
+  const totalFee = rows.reduce((sum, r) => sum + moneyToNumber(r.monthlyFee), 0);
+  const total80 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid80), 0);
+  const total20 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid20), 0);
+
+  if (els.monthlyCount) els.monthlyCount.textContent = formatInt(totalCount);
+  if (els.monthlyFeeTotal) els.monthlyFeeTotal.textContent = formatKHR(totalFee);
+  if (els.monthly80) els.monthly80.textContent = formatKHR(total80);
+  if (els.monthly20) els.monthly20.textContent = formatKHR(total20);
+
+  if (els.monthlyTableBody) {
+    els.monthlyTableBody.innerHTML = rows.length
+      ? rows.map(r => `
+        <tr>
+          <td>${escapeHtml(r.studentName || "")}</td>
+          <td>${escapeHtml(r.gender || "")}</td>
+          <td>${escapeHtml(r.studentClass || "")}</td>
+          <td>${escapeHtml(r.teacherName || "")}</td>
+          <td>${formatKHR(r.monthlyFee)}</td>
+          <td>${formatKHR(r.paid80)}</td>
+          <td>${formatKHR(r.paid20)}</td>
+          <td>${escapeHtml(r.invoiceDate || "")}</td>
+        </tr>
+      `).join("")
+      : `<tr><td colspan="8">មិនមានទិន្នន័យសម្រាប់ខែនេះ</td></tr>`;
+  }
+}
+
+function renderDashboardChart() {
+  if (!els.dashboardChart || typeof Chart === "undefined") return;
+
+  const type = els.chartType?.value || "teacher";
+  const metric = els.chartMetric?.value || "monthlyFee";
+  const grouped = {};
+
+  if (type === "teacher") {
+    state.records.forEach(r => {
+      const key = r.teacherName || "Unknown";
+      if (!grouped[key]) grouped[key] = { count: 0, monthlyFee: 0, paid80: 0, paid20: 0 };
+      grouped[key].count += 1;
+      grouped[key].monthlyFee += moneyToNumber(r.monthlyFee);
+      grouped[key].paid80 += moneyToNumber(r.paid80);
+      grouped[key].paid20 += moneyToNumber(r.paid20);
+    });
+  } else {
+    state.records.forEach(r => {
+      const key = normalizeDate(r.invoiceDate) || "Unknown";
+      if (!grouped[key]) grouped[key] = { count: 0, monthlyFee: 0, paid80: 0, paid20: 0 };
+      grouped[key].count += 1;
+      grouped[key].monthlyFee += moneyToNumber(r.monthlyFee);
+      grouped[key].paid80 += moneyToNumber(r.paid80);
+      grouped[key].paid20 += moneyToNumber(r.paid20);
+    });
+  }
+
+  const labels = Object.keys(grouped).sort();
+  const data = labels.map(label => grouped[label][metric]);
+
+  if (state.chartInstance) state.chartInstance.destroy();
+
+  state.chartInstance = new Chart(els.dashboardChart, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{ label: metric, data }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: true } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+}
+
+function printDailyReport() {
+  const reportDate = els.reportDate?.value || "";
+  const teacherName = els.reportTeacher?.value || "";
+  const rows = state.reportRows || [];
+
+  if (!rows.length) {
+    showToast("មិនមានទិន្នន័យសម្រាប់ print");
+    return;
+  }
+
+  const totalFee = rows.reduce((sum, r) => sum + moneyToNumber(r.monthlyFee), 0);
+  const total80 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid80), 0);
+  const total20 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid20), 0);
+
+  const html = `
+    <html>
+      <head>
+        <title>Daily Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
+          h1, h2, p { margin: 0 0 10px; }
+          .summary { display:flex; gap:16px; flex-wrap:wrap; margin:18px 0; }
+          .box { border:1px solid #ccc; border-radius:10px; padding:12px 16px; min-width:180px; }
+          table { width:100%; border-collapse:collapse; margin-top:18px; }
+          th, td { border:1px solid #333; padding:8px; text-align:left; }
+          th { background:#f3f4f6; }
+        </style>
+      </head>
+      <body>
+        <h1>School Pay</h1>
+        <h2>របាយការណ៍ប្រចាំថ្ងៃ</h2>
+        <p><strong>ថ្ងៃបង់ប្រាក់:</strong> ${escapeHtml(reportDate || "ទាំងអស់")}</p>
+        <p><strong>គ្រូ:</strong> ${escapeHtml(teacherName || "គ្រូទាំងអស់")}</p>
+
+        <div class="summary">
+          <div class="box"><strong>ចំនួនសិស្ស</strong><br>${formatInt(rows.length)}</div>
+          <div class="box"><strong>សរុបតម្លៃសិក្សា</strong><br>${formatKHR(totalFee)}</div>
+          <div class="box"><strong>សរុបប្រាក់គ្រូ 80%</strong><br>${formatKHR(total80)}</div>
+          <div class="box"><strong>សរុបប្រាក់សាលា 20%</strong><br>${formatKHR(total20)}</div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>ឈ្មោះសិស្ស</th>
+              <th>ភេទ</th>
+              <th>ថ្នាក់</th>
+              <th>គ្រូ</th>
+              <th>តម្លៃសិក្សា</th>
+              <th>80%</th>
+              <th>20%</th>
+              <th>ថ្ងៃបង់</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(r => `
+              <tr>
+                <td>${escapeHtml(r.studentName || "")}</td>
+                <td>${escapeHtml(r.gender || "")}</td>
+                <td>${escapeHtml(r.studentClass || "")}</td>
+                <td>${escapeHtml(r.teacherName || "")}</td>
+                <td>${formatKHR(r.monthlyFee)}</td>
+                <td>${formatKHR(r.paid80)}</td>
+                <td>${formatKHR(r.paid20)}</td>
+                <td>${escapeHtml(r.invoiceDate || "")}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </body>
+    </html>
+  `;
+
+  const w = window.open("", "_blank", "width=1200,height=800");
+  if (!w) return showToast("Browser បានបិទ popup សម្រាប់ print");
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 400);
+}
+
+function printMonthlyReport() {
+  const selectedMonth = els.monthlyReportMonth?.value || "";
+  const teacherName = els.monthlyTeacher?.value || "";
+  const rows = state.monthlyRows || [];
+
+  if (!rows.length) {
+    showToast("មិនមានទិន្នន័យសម្រាប់ print");
+    return;
+  }
+
+  const totalFee = rows.reduce((sum, r) => sum + moneyToNumber(r.monthlyFee), 0);
+  const total80 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid80), 0);
+  const total20 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid20), 0);
+
+  const html = `
+    <html>
+      <head>
+        <title>Monthly Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
+          .summary { display:flex; gap:16px; flex-wrap:wrap; margin:18px 0; }
+          .box { border:1px solid #ccc; border-radius:10px; padding:12px 16px; min-width:180px; }
+          table { width:100%; border-collapse:collapse; margin-top:18px; }
+          th, td { border:1px solid #333; padding:8px; text-align:left; }
+          th { background:#f3f4f6; }
+        </style>
+      </head>
+      <body>
+        <h1>របាយការណ៍ប្រចាំខែ</h1>
+        <p><strong>ខែ:</strong> ${escapeHtml(selectedMonth || "ទាំងអស់")}</p>
+        <p><strong>គ្រូ:</strong> ${escapeHtml(teacherName || "គ្រូទាំងអស់")}</p>
+
+        <div class="summary">
+          <div class="box"><strong>ចំនួនសិស្ស</strong><br>${formatInt(rows.length)}</div>
+          <div class="box"><strong>សរុបតម្លៃសិក្សា</strong><br>${formatKHR(totalFee)}</div>
+          <div class="box"><strong>សរុបប្រាក់គ្រូ 80%</strong><br>${formatKHR(total80)}</div>
+          <div class="box"><strong>សរុបប្រាក់សាលា 20%</strong><br>${formatKHR(total20)}</div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>ឈ្មោះសិស្ស</th>
+              <th>ភេទ</th>
+              <th>ថ្នាក់</th>
+              <th>គ្រូ</th>
+              <th>តម្លៃសិក្សា</th>
+              <th>80%</th>
+              <th>20%</th>
+              <th>ថ្ងៃបង់</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(r => `
+              <tr>
+                <td>${escapeHtml(r.studentName || "")}</td>
+                <td>${escapeHtml(r.gender || "")}</td>
+                <td>${escapeHtml(r.studentClass || "")}</td>
+                <td>${escapeHtml(r.teacherName || "")}</td>
+                <td>${formatKHR(r.monthlyFee)}</td>
+                <td>${formatKHR(r.paid80)}</td>
+                <td>${formatKHR(r.paid20)}</td>
+                <td>${escapeHtml(r.invoiceDate || "")}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </body>
+    </html>
+  `;
+
+  const w = window.open("", "_blank", "width=1200,height=800");
+  if (!w) return showToast("Browser បានបិទ popup");
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 400);
+}
+
+window.exportInvoicePdf = function(recordId) {
+  const r = state.records.find(x => String(x.recordId) === String(recordId));
+  if (!r) return showToast("រកមិនឃើញ invoice");
+
+  const html = `
+    <html>
+      <head>
+        <title>Invoice</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
+          .invoice { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 24px; border-radius: 12px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          td, th { border: 1px solid #ccc; padding: 10px; text-align: left; }
+          th { background: #f3f4f6; width: 35%; }
+        </style>
+      </head>
+      <body>
+        <div class="invoice">
+          <h1>School Pay</h1>
+          <h2>Invoice</h2>
+          <table>
+            <tr><th>ឈ្មោះសិស្ស</th><td>${escapeHtml(r.studentName || "")}</td></tr>
+            <tr><th>ភេទ</th><td>${escapeHtml(r.gender || "")}</td></tr>
+            <tr><th>ថ្នាក់</th><td>${escapeHtml(r.studentClass || "")}</td></tr>
+            <tr><th>គ្រូ</th><td>${escapeHtml(r.teacherName || "")}</td></tr>
+            <tr><th>តម្លៃសិក្សា</th><td>${formatKHR(r.monthlyFee)}</td></tr>
+            <tr><th>ប្រាក់គ្រូ 80%</th><td>${formatKHR(r.paid80)}</td></tr>
+            <tr><th>ប្រាក់សាលា 20%</th><td>${formatKHR(r.paid20)}</td></tr>
+            <tr><th>ថ្ងៃចាប់ផ្តើម</th><td>${escapeHtml(r.startDate || "")}</td></tr>
+            <tr><th>ថ្ងៃបង់ប្រាក់</th><td>${escapeHtml(r.invoiceDate || "")}</td></tr>
+            <tr><th>ចំនួនថ្ងៃ</th><td>${escapeHtml(String(r.days || ""))}</td></tr>
+          </table>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const w = window.open("", "_blank", "width=900,height=700");
+  if (!w) return showToast("Browser បានបិទ popup");
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 300);
+};
+
+function autoCalculateSplit() {
+  const monthlyFee = moneyToNumber(document.getElementById("monthlyFee").value);
+  const paid80El = document.getElementById("paid80");
+  const paid20El = document.getElementById("paid20");
+
+  if (paid80El) paid80El.value = Math.round(monthlyFee * 0.8);
+  if (paid20El) paid20El.value = Math.round(monthlyFee * 0.2);
+  autoCalculateDailyPrice();
+}
+
+function autoCalculateDailyPrice() {
+  const monthlyFee = moneyToNumber(document.getElementById("monthlyFee").value);
+  const days = moneyToNumber(document.getElementById("days").value) || 30;
+  const dailyEl = document.getElementById("dailyPrice");
+  if (dailyEl) dailyEl.value = Math.round(monthlyFee / days);
+}
+
 async function submitPaymentForm(e) {
   e.preventDefault();
-  const payload = getFormData();
 
+  if (!state.apiUrl) {
+    showToast("មិនទាន់មាន API URL");
+    return;
+  }
+
+  const payload = getFormData();
   if (!payload.studentName || !payload.teacherName || !payload.monthlyFee) {
     showToast("សូមបំពេញព័ត៌មានចាំបាច់");
     return;
@@ -299,14 +695,15 @@ async function submitPaymentForm(e) {
       payload
     });
 
-    if (!data.success) throw new Error(data.message || "រក្សាទុកបរាជ័យ");
+    if (!data.success) throw new Error(data.message || "Save failed");
 
     showToast(payload.recordId ? "បានកែទិន្នន័យរួចរាល់" : "បានបញ្ចូលទិន្នន័យរួចរាល់");
     resetForm();
     await bootstrapData();
     switchView("records");
   } catch (err) {
-    showToast(err.message);
+    console.error(err);
+    showToast(err.message || "រក្សាទុកមិនបានជោគជ័យ");
   } finally {
     els.submitBtn.disabled = false;
     els.submitBtn.textContent = "រក្សាទុក";
@@ -315,58 +712,87 @@ async function submitPaymentForm(e) {
 
 function getFormData() {
   return {
-    recordId: document.getElementById("recordId").value || "",
-    studentName: document.getElementById("studentName").value.trim(),
-    gender: document.getElementById("gender").value,
-    studentClass: document.getElementById("studentClass").value.trim(),
-    teacherName: document.getElementById("teacherName").value,
+    recordId: (document.getElementById("recordId").value || "").trim(),
+    studentName: (document.getElementById("studentName").value || "").trim(),
+    gender: (document.getElementById("gender").value || "").trim(),
+    studentClass: (document.getElementById("studentClass").value || "").trim(),
+    teacherName: (document.getElementById("teacherName").value || "").trim(),
     monthlyFee: moneyToNumber(document.getElementById("monthlyFee").value),
     paid80: moneyToNumber(document.getElementById("paid80").value),
     paid20: moneyToNumber(document.getElementById("paid20").value),
     dailyPrice: moneyToNumber(document.getElementById("dailyPrice").value),
-    startDate: document.getElementById("startDate").value,
-    invoiceDate: document.getElementById("invoiceDate").value,
+    startDate: document.getElementById("startDate").value || "",
+    invoiceDate: document.getElementById("invoiceDate").value || "",
     days: moneyToNumber(document.getElementById("days").value) || 30,
-    note: document.getElementById("note")?.value.trim() || ""
+    note: (document.getElementById("note")?.value || "").trim()
   };
+}
+
+function resetForm() {
+  els.paymentForm?.reset();
+
+  const recordIdEl = document.getElementById("recordId");
+  if (recordIdEl) recordIdEl.value = "";
+
+  const daysEl = document.getElementById("days");
+  if (daysEl) daysEl.value = 30;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const invoiceDateEl = document.getElementById("invoiceDate");
+  const startDateEl = document.getElementById("startDate");
+  if (invoiceDateEl) invoiceDateEl.value = today;
+  if (startDateEl) startDateEl.value = today;
+
+  els.submitBtn.textContent = "រក្សាទុក";
 }
 
 window.editRecord = function(recordId) {
   const r = state.records.find(x => String(x.recordId) === String(recordId));
   if (!r) return showToast("រកមិនឃើញ record");
 
-  document.getElementById("recordId").value = r.recordId;
-  document.getElementById("studentName").value = r.studentName;
-  document.getElementById("gender").value = r.gender;
-  document.getElementById("studentClass").value = r.studentClass;
-  document.getElementById("teacherName").value = r.teacherName;
-  document.getElementById("monthlyFee").value = r.monthlyFee;
-  document.getElementById("paid80").value = r.paid80;
-  document.getElementById("paid20").value = r.paid20;
-  document.getElementById("dailyPrice").value = r.dailyPrice;
-  document.getElementById("startDate").value = normalizeDate(r.startDate);
-  document.getElementById("invoiceDate").value = normalizeDate(r.invoiceDate);
+  document.getElementById("recordId").value = r.recordId || "";
+  document.getElementById("studentName").value = r.studentName || "";
+  document.getElementById("gender").value = r.gender || "";
+  document.getElementById("studentClass").value = r.studentClass || "";
+  document.getElementById("teacherName").value = r.teacherName || "";
+  document.getElementById("monthlyFee").value = r.monthlyFee || "";
+  document.getElementById("paid80").value = r.paid80 || "";
+  document.getElementById("paid20").value = r.paid20 || "";
+
+  const dailyPriceEl = document.getElementById("dailyPrice");
+  if (dailyPriceEl) dailyPriceEl.value = r.dailyPrice || "";
+
+  document.getElementById("startDate").value = normalizeDate(r.startDate) || "";
+  document.getElementById("invoiceDate").value = normalizeDate(r.invoiceDate) || "";
   document.getElementById("days").value = r.days || 30;
-  if(document.getElementById("note")) document.getElementById("note").value = r.note || "";
+
+  const noteEl = document.getElementById("note");
+  if (noteEl) noteEl.value = r.note || "";
 
   els.submitBtn.textContent = "កែទិន្នន័យ";
   switchView("payments");
-  showToast("របៀបកែសម្រួល៖ ប្តូរព័ត៌មានរួចចុច 'កែទិន្នន័យ'");
+  showToast("អ្នកអាចកែទិន្នន័យបានហើយ");
 };
 
 window.deleteRecord = async function(recordId) {
   if (!confirm("តើអ្នកពិតជាចង់លុបកំណត់ត្រានេះមែនទេ?")) return;
+
   try {
-    const data = await apiPost({ action: "deleteRecord", payload: { recordId } });
-    if (!data.success) throw new Error(data.message);
+    const data = await apiPost({
+      action: "deleteRecord",
+      payload: { recordId }
+    });
+
+    if (!data.success) throw new Error(data.message || "Delete failed");
+
     showToast("បានលុបទិន្នន័យរួចរាល់");
     await bootstrapData();
   } catch (err) {
-    showToast("លុបមិនបាន៖ " + err.message);
+    console.error(err);
+    showToast(err.message || "លុបទិន្នន័យមិនបាន");
   }
 };
 
-// --- API Helpers ---
 async function apiGet(queryString) {
   const separator = state.apiUrl.includes("?") ? "&" : "?";
   const url = `${state.apiUrl}${separator}${queryString}&_ts=${Date.now()}`;
@@ -386,62 +812,69 @@ async function apiPost(body) {
     headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify(body)
   });
-  if (!res.ok) throw new Error("Post request failed");
+
+  if (!res.ok) throw new Error("API POST error");
   return res.json();
 }
 
-// --- Formatting Helpers ---
-function moneyToNumber(v) {
-  return Number(String(v || 0).replace(/[^\d.-]/g, "")) || 0;
+function moneyToNumber(value) {
+  if (value === null || value === undefined || value === "") return 0;
+  if (typeof value === "number") return value;
+
+  const n = Number(
+    String(value)
+      .replace(/,/g, "")
+      .replace(/KHR/gi, "")
+      .replace(/៛/g, "")
+      .replace(/[^\d.-]/g, "")
+      .trim()
+  );
+
+  return Number.isFinite(n) ? n : 0;
 }
-function formatKHR(v) {
-  return `${moneyToNumber(v).toLocaleString()} ៛`;
+
+function formatKHR(value) {
+  return `${moneyToNumber(value).toLocaleString()} KHR`;
 }
-function formatInt(v) {
-  return moneyToNumber(v).toLocaleString();
+
+function formatInt(value) {
+  return moneyToNumber(value).toLocaleString();
 }
-function normalizeDate(v) {
-  if (!v) return "";
-  const d = new Date(v);
-  return isNaN(d.getTime()) ? String(v) : d.toISOString().slice(0, 10);
+
+function normalizeDate(value) {
+  if (!value) return "";
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value).trim();
+  return d.toISOString().slice(0, 10);
 }
-function autoCalculateSplit() {
-  const fee = moneyToNumber(document.getElementById("monthlyFee").value);
-  document.getElementById("paid80").value = Math.round(fee * 0.8);
-  document.getElementById("paid20").value = Math.round(fee * 0.2);
-  autoCalculateDailyPrice();
-}
-function autoCalculateDailyPrice() {
-  const fee = moneyToNumber(document.getElementById("monthlyFee").value);
-  const days = moneyToNumber(document.getElementById("days").value) || 30;
-  document.getElementById("dailyPrice").value = Math.round(fee / days);
-}
-function resetForm() {
-  els.paymentForm?.reset();
-  document.getElementById("recordId").value = "";
-  document.getElementById("days").value = 30;
-  const today = new Date().toISOString().slice(0, 10);
-  document.getElementById("invoiceDate").value = today;
-  document.getElementById("startDate").value = today;
-  els.submitBtn.textContent = "រក្សាទុក";
-}
-function showToast(msg) {
-  els.toast.textContent = msg;
+
+function showToast(message) {
+  els.toast.textContent = message;
   els.toast.classList.add("show");
-  setTimeout(() => els.toast.classList.remove("show"), 3000);
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => {
+    els.toast.classList.remove("show");
+  }, 2600);
 }
-function escapeHtml(s) {
-  return String(s ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+
+function escapeHtml(str) {
+  return String(str ?? "").replace(/[&<>"']/g, s => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[s]));
 }
-function escapeJs(s) {
-  return String(s ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+
+function escapeJs(str) {
+  return String(str ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 }
+
 function registerSW() {
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(console.error);
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").catch(console.error);
+  }
 }
-
-
-
-
-
 
