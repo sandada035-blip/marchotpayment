@@ -1,5 +1,7 @@
+const API_URL = "https://script.google.com/macros/s/AKfycbxSL9fIe1VrGB87F8fP9NDtHUcibYJlGe2tzI4y1VnL-LYXQSV3avpRua_xqYLyP01cZw/exec";
+
 const state = {
-  apiUrl: localStorage.getItem("apiUrl") || "",
+  apiUrl: API_URL,
   teachers: [],
   summary: {
     teacherCount: 0,
@@ -32,9 +34,6 @@ const els = {
   recordsTableBody: document.getElementById("recordsTableBody"),
   searchInput: document.getElementById("searchInput"),
   searchBtn: document.getElementById("searchBtn"),
-  apiUrl: document.getElementById("apiUrl"),
-  saveSettingsBtn: document.getElementById("saveSettingsBtn"),
-  testConnectionBtn: document.getElementById("testConnectionBtn"),
   toast: document.getElementById("toast"),
   refreshBtn: document.getElementById("refreshBtn"),
   installBtn: document.getElementById("installBtn"),
@@ -54,24 +53,23 @@ const els = {
 document.addEventListener("DOMContentLoaded", init);
 
 function init() {
-  els.apiUrl.value = state.apiUrl;
   bindEvents();
   registerSW();
   updateApiStatus();
 
   const today = new Date().toISOString().slice(0, 10);
   if (els.reportDate) els.reportDate.value = today;
-  if (document.getElementById("invoiceDate")) {
-    document.getElementById("invoiceDate").value = today;
-  }
-  if (document.getElementById("startDate")) {
-    document.getElementById("startDate").value = today;
-  }
+
+  const invoiceDateEl = document.getElementById("invoiceDate");
+  const startDateEl = document.getElementById("startDate");
+  if (invoiceDateEl) invoiceDateEl.value = today;
+  if (startDateEl) startDateEl.value = today;
 
   if (state.apiUrl) {
     bootstrapData();
   } else {
-    showToast("សូមដាក់ Apps Script Web App URL នៅ Settings ជាមុនសិន");
+    updateApiStatus(false);
+    showToast("សូមដាក់ API URL ក្នុង script.js");
   }
 }
 
@@ -84,8 +82,6 @@ function bindEvents() {
     btn.addEventListener("click", () => switchView(btn.dataset.go));
   });
 
-  els.saveSettingsBtn?.addEventListener("click", saveSettings);
-  els.testConnectionBtn?.addEventListener("click", testConnection);
   els.paymentForm?.addEventListener("submit", submitPaymentForm);
   els.resetFormBtn?.addEventListener("click", resetForm);
   els.searchBtn?.addEventListener("click", renderRecordsTable);
@@ -123,8 +119,7 @@ function switchView(viewName) {
     dashboard: "Dashboard",
     payments: "បញ្ចូលការបង់ប្រាក់",
     records: "កែទិន្នន័យ",
-    reports: "របាយការណ៍ប្រចាំថ្ងៃ",
-    settings: "Settings"
+    reports: "របាយការណ៍ប្រចាំថ្ងៃ"
   };
 
   els.views.forEach(v => v.classList.remove("active"));
@@ -143,44 +138,9 @@ function switchView(viewName) {
   }
 }
 
-function saveSettings() {
-  const url = (els.apiUrl.value || "").trim();
-  if (!url) {
-    showToast("សូមបញ្ចូល Web App URL");
-    return;
-  }
-
-  localStorage.setItem("apiUrl", url);
-  state.apiUrl = url;
-  updateApiStatus();
-  showToast("បានរក្សាទុក Settings");
-  bootstrapData();
-}
-
-async function testConnection() {
-  if (!state.apiUrl) {
-    showToast("មិនទាន់មាន API URL");
-    return;
-  }
-
-  try {
-    const data = await apiGet("action=init");
-    if (data && data.success) {
-      updateApiStatus(true);
-      showToast("ភ្ជាប់បានជោគជ័យ");
-    } else {
-      updateApiStatus(false);
-      showToast(data.message || "Connection មិនទាន់ត្រឹមត្រូវ");
-    }
-  } catch (err) {
-    updateApiStatus(false);
-    showToast(err.message || "Connection failed");
-  }
-}
-
 function updateApiStatus(connected = null) {
   if (!state.apiUrl) {
-    els.apiStatus.textContent = "API: Not Connected";
+    els.apiStatus.textContent = "API: Missing";
     return;
   }
 
@@ -189,7 +149,7 @@ function updateApiStatus(connected = null) {
   } else if (connected === false) {
     els.apiStatus.textContent = "API: Error";
   } else {
-    els.apiStatus.textContent = "API: Configured";
+    els.apiStatus.textContent = "API: Ready";
   }
 }
 
@@ -375,6 +335,8 @@ function printDailyReport() {
         <style>
           body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
           h1, h2, h3, p { margin: 0 0 10px; }
+          .logo-wrap { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+          .logo-wrap img { width:60px; height:60px; object-fit:contain; }
           .meta { margin-bottom: 18px; }
           .summary { display: flex; gap: 16px; flex-wrap: wrap; margin: 18px 0; }
           .box {
@@ -393,8 +355,15 @@ function printDailyReport() {
           th { background: #f3f4f6; }
         </style>
       </head>
-      <body class="print-area">
-        <h1>របាយការណ៍ប្រចាំថ្ងៃ</h1>
+      <body>
+        <div class="logo-wrap">
+          <img src="logo.png" onerror="this.style.display='none'">
+          <div>
+            <h1>School Pay</h1>
+            <h2>របាយការណ៍ប្រចាំថ្ងៃ</h2>
+          </div>
+        </div>
+
         <div class="meta">
           <p><strong>ថ្ងៃបង់ប្រាក់:</strong> ${escapeHtml(reportDate || "ទាំងអស់")}</p>
           <p><strong>គ្រូ:</strong> ${escapeHtml(teacherName || "គ្រូទាំងអស់")}</p>
@@ -448,8 +417,8 @@ function printDailyReport() {
   printWindow.document.open();
   printWindow.document.write(html);
   printWindow.document.close();
-
   printWindow.focus();
+
   setTimeout(() => {
     printWindow.print();
   }, 400);
@@ -477,8 +446,7 @@ async function submitPaymentForm(e) {
   e.preventDefault();
 
   if (!state.apiUrl) {
-    showToast("សូមកំណត់ API URL ជាមុនសិន");
-    switchView("settings");
+    showToast("មិនទាន់មាន API URL");
     return;
   }
 
@@ -535,8 +503,16 @@ function resetForm() {
   els.paymentForm?.reset();
   const recordIdEl = document.getElementById("recordId");
   if (recordIdEl) recordIdEl.value = "";
+
   const daysEl = document.getElementById("days");
   if (daysEl) daysEl.value = 30;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const invoiceDateEl = document.getElementById("invoiceDate");
+  const startDateEl = document.getElementById("startDate");
+  if (invoiceDateEl) invoiceDateEl.value = today;
+  if (startDateEl) startDateEl.value = today;
+
   els.submitBtn.textContent = "រក្សាទុក";
 }
 
@@ -555,11 +531,14 @@ window.editRecord = function(recordId) {
   document.getElementById("monthlyFee").value = r.monthlyFee || "";
   document.getElementById("paid80").value = r.paid80 || "";
   document.getElementById("paid20").value = r.paid20 || "";
+
   const dailyPriceEl = document.getElementById("dailyPrice");
   if (dailyPriceEl) dailyPriceEl.value = r.dailyPrice || "";
+
   document.getElementById("startDate").value = normalizeDate(r.startDate) || "";
   document.getElementById("invoiceDate").value = normalizeDate(r.invoiceDate) || "";
   document.getElementById("days").value = r.days || 30;
+
   const noteEl = document.getElementById("note");
   if (noteEl) noteEl.value = r.note || "";
 
