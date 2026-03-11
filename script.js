@@ -1,5 +1,4 @@
-const API_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
-
+const API_URL = "https://script.google.com/macros/s/AKfycbxSL9fIe1VrGB87F8fP9NDtHUcibYJlGe2tzI4y1VnL-LYXQSV3avpRua_xqYLyP01cZw/exec";
 const state = {
   apiUrl: API_URL,
   teachers: [],
