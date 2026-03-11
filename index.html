@@ -6,6 +6,7 @@
   <title>School Pay Dashboard</title>
   <meta name="theme-color" content="#2563eb" />
   <meta name="description" content="PWA Dashboard សម្រាប់គ្រប់គ្រងការបង់ប្រាក់សិស្ស" />
+
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="logo.png" />
   <link rel="apple-touch-icon" href="logo.png" />
@@ -47,6 +48,7 @@
           <button class="menu-btn" id="menuBtn">☰</button>
           <h2 id="pageTitle">Dashboard</h2>
         </div>
+
         <div class="topbar-actions">
           <span class="status-pill" id="apiStatus">API: Ready</span>
           <button class="primary-btn" id="refreshBtn">Refresh</button>
@@ -63,6 +65,7 @@
               បញ្ចូល កែសម្រួល ស្វែងរក បោះពុម្ពរបាយការណ៍ និងតាមដានស្ថិតិការបង់ប្រាក់សិស្ស។
             </p>
           </div>
+
           <div class="hero-actions">
             <button class="primary-btn" data-go="payments">បញ្ចូលថ្មី</button>
             <button class="secondary-btn" data-go="records">កែទិន្នន័យ</button>
@@ -74,14 +77,17 @@
             <span>ចំនួនគ្រូ</span>
             <strong id="teacherCount">0</strong>
           </div>
+
           <div class="stat-card">
             <span>ចំនួនកំណត់ត្រា</span>
             <strong id="recordCount">0</strong>
           </div>
+
           <div class="stat-card">
             <span>សរុបប្រាក់គ្រូ 80%</span>
             <strong id="total80">0</strong>
           </div>
+
           <div class="stat-card">
             <span>សរុបប្រាក់សាលា 20%</span>
             <strong id="total20">0</strong>
@@ -91,6 +97,7 @@
         <div class="panel">
           <div class="panel-head filter-head">
             <h3>Dashboard Chart</h3>
+
             <div class="filter-row">
               <select id="chartType" class="dark-select">
                 <option value="teacher">តាមគ្រូ</option>
@@ -108,7 +115,7 @@
             </div>
           </div>
 
-          <div style="background:#fff;border-radius:18px;padding:16px;">
+          <div style="background:#ffffff;border-radius:18px;padding:16px;">
             <canvas id="dashboardChart" height="100"></canvas>
           </div>
         </div>
@@ -219,10 +226,12 @@
         <div class="panel">
           <div class="panel-head filter-head">
             <h3>កែទិន្នន័យលើ Web App</h3>
+
             <div class="filter-row">
               <select id="filterTeacher" class="dark-select">
                 <option value="">គ្រូទាំងអស់</option>
               </select>
+
               <input type="text" id="searchInput" placeholder="ស្វែងរកឈ្មោះសិស្ស..." />
             </div>
           </div>
@@ -253,11 +262,14 @@
         <div class="panel">
           <div class="panel-head filter-head">
             <h3>របាយការណ៍ប្រចាំថ្ងៃ</h3>
+
             <div class="filter-row">
               <input type="date" id="reportDate" />
+
               <select id="reportTeacher" class="dark-select">
                 <option value="">គ្រូទាំងអស់</option>
               </select>
+
               <button class="secondary-btn" id="previewReportBtn">Preview</button>
               <button class="primary-btn" id="printDailyBtn">Print Daily Report</button>
             </div>
@@ -268,14 +280,17 @@
               <span>ចំនួនសិស្ស</span>
               <strong id="reportCount">0</strong>
             </div>
+
             <div class="stat-card">
               <span>សរុបតម្លៃសិក្សា</span>
               <strong id="reportMonthlyFee">0</strong>
             </div>
+
             <div class="stat-card">
               <span>សរុបប្រាក់គ្រូ 80%</span>
               <strong id="report80">0</strong>
             </div>
+
             <div class="stat-card">
               <span>សរុបប្រាក់សាលា 20%</span>
               <strong id="report20">0</strong>
@@ -307,11 +322,14 @@
         <div class="panel">
           <div class="panel-head filter-head">
             <h3>របាយការណ៍ប្រចាំខែ</h3>
+
             <div class="filter-row">
               <input type="month" id="monthlyReportMonth" />
+
               <select id="monthlyTeacher" class="dark-select">
                 <option value="">គ្រូទាំងអស់</option>
               </select>
+
               <button class="secondary-btn" id="previewMonthlyBtn">Preview</button>
               <button class="primary-btn" id="printMonthlyBtn">Print Monthly Report</button>
             </div>
@@ -322,14 +340,17 @@
               <span>ចំនួនសិស្ស</span>
               <strong id="monthlyCount">0</strong>
             </div>
+
             <div class="stat-card">
               <span>សរុបតម្លៃសិក្សា</span>
               <strong id="monthlyFeeTotal">0</strong>
             </div>
+
             <div class="stat-card">
               <span>សរុបប្រាក់គ្រូ 80%</span>
               <strong id="monthly80">0</strong>
             </div>
+
             <div class="stat-card">
               <span>សរុបប្រាក់សាលា 20%</span>
               <strong id="monthly20">0</strong>
