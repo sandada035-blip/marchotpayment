@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbxSL9fIe1VrGB87F8fP9NDtHUcibYJlGe2tzI4y1VnL-LYXQSV3avpRua_xqYLyP01cZw/exec";
+const API_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
 
 const state = {
   apiUrl: API_URL,
@@ -407,7 +407,7 @@ function renderDashboardChart() {
 
   const type = els.chartType?.value || "teacher";
   const metric = els.chartMetric?.value || "monthlyFee";
-  let grouped = {};
+  const grouped = {};
 
   if (type === "teacher") {
     state.records.forEach(r => {
@@ -432,27 +432,18 @@ function renderDashboardChart() {
   const labels = Object.keys(grouped).sort();
   const data = labels.map(label => grouped[label][metric]);
 
-  if (state.chartInstance) {
-    state.chartInstance.destroy();
-  }
+  if (state.chartInstance) state.chartInstance.destroy();
 
   state.chartInstance = new Chart(els.dashboardChart, {
     type: "bar",
     data: {
       labels,
-      datasets: [{
-        label: metric,
-        data
-      }]
+      datasets: [{ label: metric, data }]
     },
     options: {
       responsive: true,
-      plugins: {
-        legend: { display: true }
-      },
-      scales: {
-        y: { beginAtZero: true }
-      }
+      plugins: { legend: { display: true } },
+      scales: { y: { beginAtZero: true } }
     }
   });
 }
@@ -478,8 +469,6 @@ function printDailyReport() {
         <style>
           body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
           h1, h2, p { margin: 0 0 10px; }
-          .logo-wrap { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
-          .logo-wrap img { width:60px; height:60px; object-fit:contain; }
           .summary { display:flex; gap:16px; flex-wrap:wrap; margin:18px 0; }
           .box { border:1px solid #ccc; border-radius:10px; padding:12px 16px; min-width:180px; }
           table { width:100%; border-collapse:collapse; margin-top:18px; }
@@ -488,14 +477,8 @@ function printDailyReport() {
         </style>
       </head>
       <body>
-        <div class="logo-wrap">
-          <img src="logo.png" onerror="this.style.display='none'">
-          <div>
-            <h1>School Pay</h1>
-            <h2>របាយការណ៍ប្រចាំថ្ងៃ</h2>
-          </div>
-        </div>
-
+        <h1>School Pay</h1>
+        <h2>របាយការណ៍ប្រចាំថ្ងៃ</h2>
         <p><strong>ថ្ងៃបង់ប្រាក់:</strong> ${escapeHtml(reportDate || "ទាំងអស់")}</p>
         <p><strong>គ្រូ:</strong> ${escapeHtml(teacherName || "គ្រូទាំងអស់")}</p>
 
@@ -539,10 +522,7 @@ function printDailyReport() {
   `;
 
   const w = window.open("", "_blank", "width=1200,height=800");
-  if (!w) {
-    showToast("Browser បានបិទ popup សម្រាប់ print");
-    return;
-  }
+  if (!w) return showToast("Browser បានបិទ popup សម្រាប់ print");
   w.document.open();
   w.document.write(html);
   w.document.close();
@@ -622,10 +602,7 @@ function printMonthlyReport() {
   `;
 
   const w = window.open("", "_blank", "width=1200,height=800");
-  if (!w) {
-    showToast("Browser បានបិទ popup");
-    return;
-  }
+  if (!w) return showToast("Browser បានបិទ popup");
   w.document.open();
   w.document.write(html);
   w.document.close();
@@ -635,10 +612,7 @@ function printMonthlyReport() {
 
 window.exportInvoicePdf = function(recordId) {
   const r = state.records.find(x => String(x.recordId) === String(recordId));
-  if (!r) {
-    showToast("រកមិនឃើញ invoice");
-    return;
-  }
+  if (!r) return showToast("រកមិនឃើញ invoice");
 
   const html = `
     <html>
@@ -647,7 +621,6 @@ window.exportInvoicePdf = function(recordId) {
         <style>
           body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
           .invoice { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 24px; border-radius: 12px; }
-          h1, h2, p { margin: 0 0 12px; }
           table { width: 100%; border-collapse: collapse; margin-top: 16px; }
           td, th { border: 1px solid #ccc; padding: 10px; text-align: left; }
           th { background: #f3f4f6; width: 35%; }
@@ -675,10 +648,7 @@ window.exportInvoicePdf = function(recordId) {
   `;
 
   const w = window.open("", "_blank", "width=900,height=700");
-  if (!w) {
-    showToast("Browser បានបិទ popup");
-    return;
-  }
+  if (!w) return showToast("Browser បានបិទ popup");
   w.document.open();
   w.document.write(html);
   w.document.close();
@@ -693,7 +663,6 @@ function autoCalculateSplit() {
 
   if (paid80El) paid80El.value = Math.round(monthlyFee * 0.8);
   if (paid20El) paid20El.value = Math.round(monthlyFee * 0.2);
-
   autoCalculateDailyPrice();
 }
 
@@ -713,7 +682,6 @@ async function submitPaymentForm(e) {
   }
 
   const payload = getFormData();
-
   if (!payload.studentName || !payload.teacherName || !payload.monthlyFee) {
     showToast("សូមបំពេញព័ត៌មានចាំបាច់");
     return;
@@ -781,10 +749,7 @@ function resetForm() {
 
 window.editRecord = function(recordId) {
   const r = state.records.find(x => String(x.recordId) === String(recordId));
-  if (!r) {
-    showToast("រកមិនឃើញ record");
-    return;
-  }
+  if (!r) return showToast("រកមិនឃើញ record");
 
   document.getElementById("recordId").value = r.recordId || "";
   document.getElementById("studentName").value = r.studentName || "";
@@ -907,4 +872,3 @@ function registerSW() {
     navigator.serviceWorker.register("./sw.js").catch(console.error);
   }
 }
-
