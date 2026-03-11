@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbxSL9fIe1VrGB87F8fP9NDtHUcibYJlGe2tzI4y1VnL-LYXQSV3avpRua_xqYLyP01cZw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby1fD9n9I4zNujCg3OpSEBb834aTHBxjGXj5H4WhA1IpG-BrnZQ5O874q6l7W6xOcpJ7A/exec";
 const state = {
   apiUrl: API_URL,
   teachers: [],
@@ -871,3 +871,4 @@ function registerSW() {
     navigator.serviceWorker.register("./sw.js").catch(console.error);
   }
 }
+
