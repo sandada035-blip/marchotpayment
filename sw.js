@@ -40,7 +40,6 @@ self.addEventListener("fetch", (event) => {
 
   if (request.method !== "GET") return;
 
-  // កុំ cache API data ពី Google Apps Script
   if (API_HOSTS.includes(url.hostname)) {
     event.respondWith(
       fetch(request, { cache: "no-store" }).catch(() => {
@@ -59,7 +58,6 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // HTML page => network first
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
@@ -73,7 +71,6 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Static assets => cache first
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
