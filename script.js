@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbxSL9fIe1VrGB87F8fP9NDtHUcibYJlGe2tzI4y1VnL-LYXQSV3avpRua_xqYLyP01cZw/exec";
+const API_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
 
 const state = {
   apiUrl: API_URL,
@@ -12,6 +12,8 @@ const state = {
   recent: [],
   records: [],
   reportRows: [],
+  monthlyRows: [],
+  chartInstance: null,
   deferredPrompt: null
 };
 
@@ -33,12 +35,12 @@ const els = {
   filterTeacher: document.getElementById("filterTeacher"),
   recordsTableBody: document.getElementById("recordsTableBody"),
   searchInput: document.getElementById("searchInput"),
-  searchBtn: document.getElementById("searchBtn"),
   toast: document.getElementById("toast"),
   refreshBtn: document.getElementById("refreshBtn"),
   installBtn: document.getElementById("installBtn"),
   menuBtn: document.getElementById("menuBtn"),
   sidebar: document.getElementById("sidebar"),
+
   reportDate: document.getElementById("reportDate"),
   reportTeacher: document.getElementById("reportTeacher"),
   previewReportBtn: document.getElementById("previewReportBtn"),
@@ -47,7 +49,22 @@ const els = {
   reportCount: document.getElementById("reportCount"),
   reportMonthlyFee: document.getElementById("reportMonthlyFee"),
   report80: document.getElementById("report80"),
-  report20: document.getElementById("report20")
+  report20: document.getElementById("report20"),
+
+  monthlyReportMonth: document.getElementById("monthlyReportMonth"),
+  monthlyTeacher: document.getElementById("monthlyTeacher"),
+  previewMonthlyBtn: document.getElementById("previewMonthlyBtn"),
+  printMonthlyBtn: document.getElementById("printMonthlyBtn"),
+  monthlyTableBody: document.getElementById("monthlyTableBody"),
+  monthlyCount: document.getElementById("monthlyCount"),
+  monthlyFeeTotal: document.getElementById("monthlyFeeTotal"),
+  monthly80: document.getElementById("monthly80"),
+  monthly20: document.getElementById("monthly20"),
+
+  chartType: document.getElementById("chartType"),
+  chartMetric: document.getElementById("chartMetric"),
+  refreshChartBtn: document.getElementById("refreshChartBtn"),
+  dashboardChart: document.getElementById("dashboardChart")
 };
 
 document.addEventListener("DOMContentLoaded", init);
@@ -58,7 +75,11 @@ function init() {
   updateApiStatus();
 
   const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
   if (els.reportDate) els.reportDate.value = today;
+  if (els.monthlyReportMonth) els.monthlyReportMonth.value = monthStr;
 
   const invoiceDateEl = document.getElementById("invoiceDate");
   const startDateEl = document.getElementById("startDate");
@@ -84,8 +105,8 @@ function bindEvents() {
 
   els.paymentForm?.addEventListener("submit", submitPaymentForm);
   els.resetFormBtn?.addEventListener("click", resetForm);
-  els.searchBtn?.addEventListener("click", renderRecordsTable);
   els.filterTeacher?.addEventListener("change", renderRecordsTable);
+  els.searchInput?.addEventListener("input", renderRecordsTable);
   els.refreshBtn?.addEventListener("click", bootstrapData);
   els.menuBtn?.addEventListener("click", () => els.sidebar.classList.toggle("open"));
 
@@ -98,6 +119,15 @@ function bindEvents() {
   els.printDailyBtn?.addEventListener("click", printDailyReport);
   els.reportTeacher?.addEventListener("change", previewDailyReport);
   els.reportDate?.addEventListener("change", previewDailyReport);
+
+  els.previewMonthlyBtn?.addEventListener("click", previewMonthlyReport);
+  els.printMonthlyBtn?.addEventListener("click", printMonthlyReport);
+  els.monthlyTeacher?.addEventListener("change", previewMonthlyReport);
+  els.monthlyReportMonth?.addEventListener("change", previewMonthlyReport);
+
+  els.refreshChartBtn?.addEventListener("click", renderDashboardChart);
+  els.chartType?.addEventListener("change", renderDashboardChart);
+  els.chartMetric?.addEventListener("change", renderDashboardChart);
 
   window.addEventListener("beforeinstallprompt", e => {
     e.preventDefault();
@@ -119,7 +149,8 @@ function switchView(viewName) {
     dashboard: "Dashboard",
     payments: "បញ្ចូលការបង់ប្រាក់",
     records: "កែទិន្នន័យ",
-    reports: "របាយការណ៍ប្រចាំថ្ងៃ"
+    reports: "របាយការណ៍ប្រចាំថ្ងៃ",
+    monthly: "របាយការណ៍ប្រចាំខែ"
   };
 
   els.views.forEach(v => v.classList.remove("active"));
@@ -133,9 +164,9 @@ function switchView(viewName) {
   els.pageTitle.textContent = titles[viewName] || "Dashboard";
   els.sidebar.classList.remove("open");
 
-  if (viewName === "reports") {
-    previewDailyReport();
-  }
+  if (viewName === "reports") previewDailyReport();
+  if (viewName === "monthly") previewMonthlyReport();
+  if (viewName === "dashboard") renderDashboardChart();
 }
 
 function updateApiStatus(connected = null) {
@@ -169,6 +200,8 @@ async function bootstrapData() {
     renderDashboard();
     renderRecordsTable();
     previewDailyReport();
+    previewMonthlyReport();
+    renderDashboardChart();
     updateApiStatus(true);
   } catch (err) {
     console.error(err);
@@ -194,6 +227,13 @@ function fillTeacherSelects() {
 
   if (els.reportTeacher) {
     els.reportTeacher.innerHTML = [
+      '<option value="">គ្រូទាំងអស់</option>',
+      ...state.teachers.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`)
+    ].join("");
+  }
+
+  if (els.monthlyTeacher) {
+    els.monthlyTeacher.innerHTML = [
       '<option value="">គ្រូទាំងអស់</option>',
       ...state.teachers.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`)
     ].join("");
@@ -260,6 +300,7 @@ function renderRecordsTable() {
         <td>
           <div class="table-actions">
             <button class="small-btn edit-btn" onclick="editRecord('${escapeJs(r.recordId)}')">Edit</button>
+            <button class="small-btn secondary-btn" onclick="exportInvoicePdf('${escapeJs(r.recordId)}')">PDF</button>
             <button class="small-btn delete-btn" onclick="deleteRecord('${escapeJs(r.recordId)}')">Delete</button>
           </div>
         </td>
@@ -283,7 +324,6 @@ function previewDailyReport() {
   }
 
   rows.sort((a, b) => String(a.teacherName || "").localeCompare(String(b.teacherName || "")));
-
   state.reportRows = rows;
 
   const totalCount = rows.length;
@@ -314,6 +354,109 @@ function previewDailyReport() {
   }
 }
 
+function previewMonthlyReport() {
+  const selectedMonth = (els.monthlyReportMonth?.value || "").trim();
+  const selectedTeacher = (els.monthlyTeacher?.value || "").trim();
+
+  let rows = [...state.records];
+
+  if (selectedMonth) {
+    rows = rows.filter(r => {
+      const d = normalizeDate(r.invoiceDate);
+      return d && d.slice(0, 7) === selectedMonth;
+    });
+  }
+
+  if (selectedTeacher) {
+    rows = rows.filter(r => String(r.teacherName || "") === selectedTeacher);
+  }
+
+  rows.sort((a, b) => new Date(a.invoiceDate || 0) - new Date(b.invoiceDate || 0));
+  state.monthlyRows = rows;
+
+  const totalCount = rows.length;
+  const totalFee = rows.reduce((sum, r) => sum + moneyToNumber(r.monthlyFee), 0);
+  const total80 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid80), 0);
+  const total20 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid20), 0);
+
+  if (els.monthlyCount) els.monthlyCount.textContent = formatInt(totalCount);
+  if (els.monthlyFeeTotal) els.monthlyFeeTotal.textContent = formatKHR(totalFee);
+  if (els.monthly80) els.monthly80.textContent = formatKHR(total80);
+  if (els.monthly20) els.monthly20.textContent = formatKHR(total20);
+
+  if (els.monthlyTableBody) {
+    els.monthlyTableBody.innerHTML = rows.length
+      ? rows.map(r => `
+        <tr>
+          <td>${escapeHtml(r.studentName || "")}</td>
+          <td>${escapeHtml(r.gender || "")}</td>
+          <td>${escapeHtml(r.studentClass || "")}</td>
+          <td>${escapeHtml(r.teacherName || "")}</td>
+          <td>${formatKHR(r.monthlyFee)}</td>
+          <td>${formatKHR(r.paid80)}</td>
+          <td>${formatKHR(r.paid20)}</td>
+          <td>${escapeHtml(r.invoiceDate || "")}</td>
+        </tr>
+      `).join("")
+      : `<tr><td colspan="8">មិនមានទិន្នន័យសម្រាប់ខែនេះ</td></tr>`;
+  }
+}
+
+function renderDashboardChart() {
+  if (!els.dashboardChart || typeof Chart === "undefined") return;
+
+  const type = els.chartType?.value || "teacher";
+  const metric = els.chartMetric?.value || "monthlyFee";
+  let grouped = {};
+
+  if (type === "teacher") {
+    state.records.forEach(r => {
+      const key = r.teacherName || "Unknown";
+      if (!grouped[key]) grouped[key] = { count: 0, monthlyFee: 0, paid80: 0, paid20: 0 };
+      grouped[key].count += 1;
+      grouped[key].monthlyFee += moneyToNumber(r.monthlyFee);
+      grouped[key].paid80 += moneyToNumber(r.paid80);
+      grouped[key].paid20 += moneyToNumber(r.paid20);
+    });
+  } else {
+    state.records.forEach(r => {
+      const key = normalizeDate(r.invoiceDate) || "Unknown";
+      if (!grouped[key]) grouped[key] = { count: 0, monthlyFee: 0, paid80: 0, paid20: 0 };
+      grouped[key].count += 1;
+      grouped[key].monthlyFee += moneyToNumber(r.monthlyFee);
+      grouped[key].paid80 += moneyToNumber(r.paid80);
+      grouped[key].paid20 += moneyToNumber(r.paid20);
+    });
+  }
+
+  const labels = Object.keys(grouped).sort();
+  const data = labels.map(label => grouped[label][metric]);
+
+  if (state.chartInstance) {
+    state.chartInstance.destroy();
+  }
+
+  state.chartInstance = new Chart(els.dashboardChart, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: metric,
+        data
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: true }
+      },
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+}
+
 function printDailyReport() {
   const reportDate = els.reportDate?.value || "";
   const teacherName = els.reportTeacher?.value || "";
@@ -334,25 +477,14 @@ function printDailyReport() {
         <title>Daily Report</title>
         <style>
           body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
-          h1, h2, h3, p { margin: 0 0 10px; }
+          h1, h2, p { margin: 0 0 10px; }
           .logo-wrap { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
           .logo-wrap img { width:60px; height:60px; object-fit:contain; }
-          .meta { margin-bottom: 18px; }
-          .summary { display: flex; gap: 16px; flex-wrap: wrap; margin: 18px 0; }
-          .box {
-            border: 1px solid #ccc;
-            border-radius: 10px;
-            padding: 12px 16px;
-            min-width: 180px;
-          }
-          table { width: 100%; border-collapse: collapse; margin-top: 18px; }
-          th, td {
-            border: 1px solid #333;
-            padding: 8px;
-            text-align: left;
-            font-size: 14px;
-          }
-          th { background: #f3f4f6; }
+          .summary { display:flex; gap:16px; flex-wrap:wrap; margin:18px 0; }
+          .box { border:1px solid #ccc; border-radius:10px; padding:12px 16px; min-width:180px; }
+          table { width:100%; border-collapse:collapse; margin-top:18px; }
+          th, td { border:1px solid #333; padding:8px; text-align:left; }
+          th { background:#f3f4f6; }
         </style>
       </head>
       <body>
@@ -364,10 +496,8 @@ function printDailyReport() {
           </div>
         </div>
 
-        <div class="meta">
-          <p><strong>ថ្ងៃបង់ប្រាក់:</strong> ${escapeHtml(reportDate || "ទាំងអស់")}</p>
-          <p><strong>គ្រូ:</strong> ${escapeHtml(teacherName || "គ្រូទាំងអស់")}</p>
-        </div>
+        <p><strong>ថ្ងៃបង់ប្រាក់:</strong> ${escapeHtml(reportDate || "ទាំងអស់")}</p>
+        <p><strong>គ្រូ:</strong> ${escapeHtml(teacherName || "គ្រូទាំងអស់")}</p>
 
         <div class="summary">
           <div class="box"><strong>ចំនួនសិស្ស</strong><br>${formatInt(rows.length)}</div>
@@ -408,21 +538,153 @@ function printDailyReport() {
     </html>
   `;
 
-  const printWindow = window.open("", "_blank", "width=1200,height=800");
-  if (!printWindow) {
+  const w = window.open("", "_blank", "width=1200,height=800");
+  if (!w) {
     showToast("Browser បានបិទ popup សម្រាប់ print");
     return;
   }
-
-  printWindow.document.open();
-  printWindow.document.write(html);
-  printWindow.document.close();
-  printWindow.focus();
-
-  setTimeout(() => {
-    printWindow.print();
-  }, 400);
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 400);
 }
+
+function printMonthlyReport() {
+  const selectedMonth = els.monthlyReportMonth?.value || "";
+  const teacherName = els.monthlyTeacher?.value || "";
+  const rows = state.monthlyRows || [];
+
+  if (!rows.length) {
+    showToast("មិនមានទិន្នន័យសម្រាប់ print");
+    return;
+  }
+
+  const totalFee = rows.reduce((sum, r) => sum + moneyToNumber(r.monthlyFee), 0);
+  const total80 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid80), 0);
+  const total20 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid20), 0);
+
+  const html = `
+    <html>
+      <head>
+        <title>Monthly Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
+          .summary { display:flex; gap:16px; flex-wrap:wrap; margin:18px 0; }
+          .box { border:1px solid #ccc; border-radius:10px; padding:12px 16px; min-width:180px; }
+          table { width:100%; border-collapse:collapse; margin-top:18px; }
+          th, td { border:1px solid #333; padding:8px; text-align:left; }
+          th { background:#f3f4f6; }
+        </style>
+      </head>
+      <body>
+        <h1>របាយការណ៍ប្រចាំខែ</h1>
+        <p><strong>ខែ:</strong> ${escapeHtml(selectedMonth || "ទាំងអស់")}</p>
+        <p><strong>គ្រូ:</strong> ${escapeHtml(teacherName || "គ្រូទាំងអស់")}</p>
+
+        <div class="summary">
+          <div class="box"><strong>ចំនួនសិស្ស</strong><br>${formatInt(rows.length)}</div>
+          <div class="box"><strong>សរុបតម្លៃសិក្សា</strong><br>${formatKHR(totalFee)}</div>
+          <div class="box"><strong>សរុបប្រាក់គ្រូ 80%</strong><br>${formatKHR(total80)}</div>
+          <div class="box"><strong>សរុបប្រាក់សាលា 20%</strong><br>${formatKHR(total20)}</div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>ឈ្មោះសិស្ស</th>
+              <th>ភេទ</th>
+              <th>ថ្នាក់</th>
+              <th>គ្រូ</th>
+              <th>តម្លៃសិក្សា</th>
+              <th>80%</th>
+              <th>20%</th>
+              <th>ថ្ងៃបង់</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(r => `
+              <tr>
+                <td>${escapeHtml(r.studentName || "")}</td>
+                <td>${escapeHtml(r.gender || "")}</td>
+                <td>${escapeHtml(r.studentClass || "")}</td>
+                <td>${escapeHtml(r.teacherName || "")}</td>
+                <td>${formatKHR(r.monthlyFee)}</td>
+                <td>${formatKHR(r.paid80)}</td>
+                <td>${formatKHR(r.paid20)}</td>
+                <td>${escapeHtml(r.invoiceDate || "")}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </body>
+    </html>
+  `;
+
+  const w = window.open("", "_blank", "width=1200,height=800");
+  if (!w) {
+    showToast("Browser បានបិទ popup");
+    return;
+  }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 400);
+}
+
+window.exportInvoicePdf = function(recordId) {
+  const r = state.records.find(x => String(x.recordId) === String(recordId));
+  if (!r) {
+    showToast("រកមិនឃើញ invoice");
+    return;
+  }
+
+  const html = `
+    <html>
+      <head>
+        <title>Invoice</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
+          .invoice { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 24px; border-radius: 12px; }
+          h1, h2, p { margin: 0 0 12px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          td, th { border: 1px solid #ccc; padding: 10px; text-align: left; }
+          th { background: #f3f4f6; width: 35%; }
+        </style>
+      </head>
+      <body>
+        <div class="invoice">
+          <h1>School Pay</h1>
+          <h2>Invoice</h2>
+          <table>
+            <tr><th>ឈ្មោះសិស្ស</th><td>${escapeHtml(r.studentName || "")}</td></tr>
+            <tr><th>ភេទ</th><td>${escapeHtml(r.gender || "")}</td></tr>
+            <tr><th>ថ្នាក់</th><td>${escapeHtml(r.studentClass || "")}</td></tr>
+            <tr><th>គ្រូ</th><td>${escapeHtml(r.teacherName || "")}</td></tr>
+            <tr><th>តម្លៃសិក្សា</th><td>${formatKHR(r.monthlyFee)}</td></tr>
+            <tr><th>ប្រាក់គ្រូ 80%</th><td>${formatKHR(r.paid80)}</td></tr>
+            <tr><th>ប្រាក់សាលា 20%</th><td>${formatKHR(r.paid20)}</td></tr>
+            <tr><th>ថ្ងៃចាប់ផ្តើម</th><td>${escapeHtml(r.startDate || "")}</td></tr>
+            <tr><th>ថ្ងៃបង់ប្រាក់</th><td>${escapeHtml(r.invoiceDate || "")}</td></tr>
+            <tr><th>ចំនួនថ្ងៃ</th><td>${escapeHtml(String(r.days || ""))}</td></tr>
+          </table>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const w = window.open("", "_blank", "width=900,height=700");
+  if (!w) {
+    showToast("Browser បានបិទ popup");
+    return;
+  }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 300);
+};
 
 function autoCalculateSplit() {
   const monthlyFee = moneyToNumber(document.getElementById("monthlyFee").value);
@@ -501,6 +763,7 @@ function getFormData() {
 
 function resetForm() {
   els.paymentForm?.reset();
+
   const recordIdEl = document.getElementById("recordId");
   if (recordIdEl) recordIdEl.value = "";
 
