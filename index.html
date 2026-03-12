@@ -3,161 +3,380 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>School Pay Version 4</title>
-  <link rel="manifest" href="./manifest.json" />
-  <link rel="icon" href="./logo.png" />
-  <link rel="stylesheet" href="./style.css" />
+  <title>School Pay Dashboard</title>
   <meta name="theme-color" content="#2563eb" />
+  <meta name="description" content="PWA Dashboard សម្រាប់គ្រប់គ្រងការបង់ប្រាក់សិស្ស" />
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="logo.png" />
+  <link rel="apple-touch-icon" href="logo.png" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="app-shell">
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
       <div class="brand">
-        <img src="./logo.png" alt="logo" class="logo" />
+        <img
+          src="logo.png"
+          alt="School Pay Logo"
+          class="brand-logo"
+          onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><defs><linearGradient id=%22g%22 x1=%220%22 x2=%221%22 y1=%220%22 y2=%221%22><stop offset=%220%25%22 stop-color=%22%233b82f6%22/><stop offset=%22100%25%22 stop-color=%22%2310b981%22/></linearGradient></defs><rect width=%22128%22 height=%22128%22 rx=%2228%22 fill=%22url(%23g)%22/><text x=%2264%22 y=%2276%22 font-size=%2248%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22>SP</text></svg>';"
+        />
         <div>
           <h1>School Pay</h1>
           <p>PWA Dashboard</p>
         </div>
       </div>
-      <div class="menu">
-        <button class="menu-btn active" data-view="dashboardView">Dashboard</button>
-        <button class="menu-btn" data-view="formView">បញ្ចូលសិស្ស</button>
-        <button class="menu-btn" data-view="tableView">តារាងកែតម្រូវ</button>
-        <button class="menu-btn" data-view="reportsView">របាយការណ៍</button>
-        <button class="menu-btn" data-view="settingsView">Settings</button>
-      </div>
-      <div class="session-box">
-        <div>Role: <strong id="roleText">-</strong></div>
-        <div>User: <strong id="userText">-</strong></div>
-        <button id="logoutBtn" class="danger">Logout</button>
+
+      <nav class="nav">
+        <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+        <button class="nav-btn" data-view="payments">បញ្ចូលការបង់ប្រាក់</button>
+        <button class="nav-btn" data-view="records">កែទិន្នន័យ</button>
+        <button class="nav-btn" data-view="reports">របាយការណ៍ប្រចាំថ្ងៃ</button>
+        <button class="nav-btn" data-view="monthly">របាយការណ៍ប្រចាំខែ</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button id="installBtn" class="ghost-btn hidden">Install App</button>
+        <small>GitHub + Vercel + Google Sheets</small>
       </div>
     </aside>
 
     <main class="main">
       <header class="topbar">
         <div>
+          <button class="menu-btn" id="menuBtn">☰</button>
           <h2 id="pageTitle">Dashboard</h2>
-          <div id="errorText" class="muted"></div>
         </div>
-        <div class="top-actions">
-          <div id="apiStatus" class="status-pill">API: Waiting...</div>
-          <button id="refreshBtn">Refresh</button>
+
+        <div class="topbar-actions">
+          <span class="status-pill" id="apiStatus">API: Ready</span>
+          <button class="primary-btn" id="refreshBtn">Refresh</button>
         </div>
       </header>
 
-      <section id="loginPanel" class="panel auth-panel">
-        <div class="panel-header">
-          <h3>Login</h3>
-          <p class="muted">សូមភ្ជាប់ Google Apps Script Web App មុនសិន</p>
+      <section class="view active" id="dashboardView">
+        <div class="hero-card">
+          <div>
+            <p class="eyebrow">សូមស្វាគមន៍</p>
+            <h3>ផ្ទាំងគ្រប់គ្រងការបង់ប្រាក់សិស្ស</h3>
+            <p class="muted">
+              បញ្ចូល កែសម្រួល ស្វែងរក បោះពុម្ពរបាយការណ៍ និងតាមដានស្ថិតិការបង់ប្រាក់សិស្ស។
+            </p>
+          </div>
+
+          <div class="hero-actions">
+            <button class="primary-btn" data-go="payments">បញ្ចូលថ្មី</button>
+            <button class="secondary-btn" data-go="records">កែទិន្នន័យ</button>
+          </div>
         </div>
-        <label>
-          <span>Google Apps Script Web App URL</span>
-          <input id="apiUrl" type="text" placeholder="Paste /exec URL here" />
-        </label>
-        <div class="btn-row end">
-          <button id="saveApiBtn" type="button" class="ghost">រក្សាទុក URL</button>
-          <button id="testApiBtn" type="button">Test API</button>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span>ចំនួនគ្រូ</span>
+            <strong id="teacherCount">0</strong>
+          </div>
+
+          <div class="stat-card">
+            <span>ចំនួនកំណត់ត្រា</span>
+            <strong id="recordCount">0</strong>
+          </div>
+
+          <div class="stat-card">
+            <span>សរុបប្រាក់គ្រូ 80%</span>
+            <strong id="total80">0</strong>
+          </div>
+
+          <div class="stat-card">
+            <span>សរុបប្រាក់សាលា 20%</span>
+            <strong id="total20">0</strong>
+          </div>
         </div>
-        <div class="grid-2">
-          <label><span>Username</span><input id="username" type="text" placeholder="admin" /></label>
-          <label><span>Password</span><input id="password" type="password" placeholder="admin123" /></label>
+
+        <div class="panel">
+          <div class="panel-head filter-head">
+            <h3>Dashboard Chart</h3>
+
+            <div class="filter-row">
+              <select id="chartType" class="dark-select">
+                <option value="teacher">តាមគ្រូ</option>
+                <option value="daily">តាមថ្ងៃបង់</option>
+              </select>
+
+              <select id="chartMetric" class="dark-select">
+                <option value="monthlyFee">តម្លៃសិក្សា</option>
+                <option value="paid80">ប្រាក់គ្រូ 80%</option>
+                <option value="paid20">ប្រាក់សាលា 20%</option>
+                <option value="count">ចំនួនសិស្ស</option>
+              </select>
+
+              <button class="secondary-btn" id="refreshChartBtn">Refresh Chart</button>
+            </div>
+          </div>
+
+          <div style="background:#ffffff;border-radius:18px;padding:16px;">
+            <canvas id="dashboardChart" height="100"></canvas>
+          </div>
         </div>
-        <div class="btn-row"><button id="loginBtn">Login</button></div>
-        <div class="hint-box">
-          <div><strong>Admin:</strong> admin / admin123</div>
-          <div><strong>User:</strong> user / user123</div>
+
+        <div class="panel-grid" style="margin-top:18px;">
+          <section class="panel">
+            <div class="panel-head">
+              <h3>Teacher Sheets</h3>
+            </div>
+            <div id="teacherList" class="teacher-list"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h3>កំណត់ត្រាចុងក្រោយ</h3>
+            </div>
+            <div id="recentRecords" class="recent-list"></div>
+          </section>
         </div>
       </section>
 
-      <section id="appPanel" class="hidden">
-        <section id="dashboardView" class="view-section">
-          <div class="panel hero">
-            <div>
-              <p class="eyebrow">សូមស្វាគមន៍</p>
-              <h3>ប្រព័ន្ធគ្រប់គ្រងការបង់ប្រាក់សិស្ស</h3>
-              <p class="muted">Single-page PWA, backend login និង edit record តាម Record ID។</p>
-            </div>
+      <section class="view" id="paymentsView">
+        <div class="panel">
+          <div class="panel-head">
+            <h3>បញ្ចូលការបង់ប្រាក់សិស្ស</h3>
           </div>
-          <div class="stats-grid">
-            <div class="panel stat-card"><span>ចំនួនសិស្ស</span><strong id="studentCount">0</strong></div>
-            <div class="panel stat-card"><span>ចំនួនគ្រូ</span><strong id="teacherCount">0</strong></div>
-            <div class="panel stat-card"><span>ប្រាក់គ្រូ 80%</span><strong id="total80">0 KHR</strong></div>
-            <div class="panel stat-card"><span>ប្រាក់សាលា 20%</span><strong id="total20">0 KHR</strong></div>
-          </div>
-        </section>
 
-        <section id="formView" class="view-section hidden">
-          <div class="panel">
-            <div class="panel-header">
-              <h3 id="formTitle">បញ្ចូលទិន្នន័យ</h3>
-              <p class="muted">Admin ប៉ុណ្ណោះដែលអាចបន្ថែម និងកែប្រែបាន។</p>
-            </div>
-            <div class="form-grid">
-              <label><span>ឈ្មោះសិស្ស</span><input id="studentName" type="text" /></label>
-              <label><span>ភេទ</span><input id="gender" type="text" /></label>
-              <label><span>ថ្នាក់</span><input id="studentClass" type="text" /></label>
-              <label><span>ឈ្មោះគ្រូ</span><input id="teacherName" type="text" /></label>
-              <label><span>តម្លៃសិក្សា</span><input id="monthlyFee" type="number" /></label>
-              <label><span>ប្រាក់គ្រូ 80%</span><input id="paid80" type="number" /></label>
-              <label><span>ប្រាក់សាលា 20%</span><input id="paid20" type="number" /></label>
-              <label><span>តម្លៃក្នុងមួយថ្ងៃ</span><input id="dailyPrice" type="number" /></label>
-              <label><span>ថ្ងៃចាប់ផ្តើម</span><input id="startDate" type="date" /></label>
-              <label><span>ថ្ងៃបង់ប្រាក់</span><input id="invoiceDate" type="date" /></label>
-              <label><span>ចំនួនថ្ងៃក្នុង១ខែ</span><input id="days" type="number" value="30" /></label>
-              <label><span>Note</span><input id="note" type="text" /></label>
-            </div>
-            <div class="btn-row">
-              <button id="saveBtn">រក្សាទុក</button>
-              <button id="clearBtn" type="button" class="ghost">សម្អាត</button>
-            </div>
-          </div>
-        </section>
+          <form id="paymentForm" class="form-grid">
+            <input type="hidden" id="recordId" />
 
-        <section id="tableView" class="view-section hidden">
-          <div class="panel">
-            <div class="toolbar">
-              <input id="searchInput" type="text" placeholder="ស្វែងរកឈ្មោះ/ថ្នាក់/គ្រូ/Record ID" />
-              <select id="teacherFilter"><option value="">គ្រប់គ្រូ</option></select>
+            <div class="field">
+              <label for="studentName">ឈ្មោះសិស្ស</label>
+              <input id="studentName" name="studentName" type="text" required />
             </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>#</th><th>Record ID</th><th>ឈ្មោះសិស្ស</th><th>ភេទ</th><th>ថ្នាក់</th><th>គ្រូ</th><th>តម្លៃ</th><th>ថ្ងៃបង់</th><th>Note</th><th>Action</th>
-                  </tr>
-                </thead>
-                <tbody id="recordsTableBody"></tbody>
-              </table>
-            </div>
-          </div>
-        </section>
 
-        <section id="reportsView" class="view-section hidden">
-          <div class="panel">
-            <div class="panel-header">
-              <h3>របាយការណ៍</h3>
-              <p class="muted">សង្ខេបតាមគ្រូ និងការទូទាត់សរុប</p>
+            <div class="field">
+              <label for="gender">ភេទ</label>
+              <select id="gender" name="gender" required class="dark-select">
+                <option value="">ជ្រើសរើស</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
             </div>
-            <div id="reportGrid" class="report-grid"></div>
-          </div>
-        </section>
 
-        <section id="settingsView" class="view-section hidden">
-          <div class="panel">
-            <div class="panel-header">
-              <h3>Settings</h3>
-              <p class="muted">ប្តូរ Google Apps Script Web App URL</p>
+            <div class="field">
+              <label for="studentClass">ថ្នាក់</label>
+              <input id="studentClass" name="studentClass" type="text" placeholder="ឧ. ថ្នាក់ទី១, Grade 5, A1" />
             </div>
-            <label><span>Google Apps Script Web App URL</span><input id="apiUrlSettings" type="text" placeholder="Paste /exec URL here" /></label>
-            <div class="btn-row">
-              <button id="saveApiBtn2" type="button" class="ghost">រក្សាទុក URL</button>
-              <button id="testApiBtn2" type="button">Test API</button>
+
+            <div class="field">
+              <label for="teacherName">ឈ្មោះគ្រូ / Sheet</label>
+              <select id="teacherName" name="teacherName" required class="dark-select">
+                <option value="">ជ្រើសរើសគ្រូ</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="monthlyFee">តម្លៃសិក្សា</label>
+              <input id="monthlyFee" name="monthlyFee" type="number" min="0" required />
+            </div>
+
+            <div class="field">
+              <label for="paid80">ប្រាក់គ្រូ 80%</label>
+              <input id="paid80" name="paid80" type="number" min="0" />
+            </div>
+
+            <div class="field">
+              <label for="paid20">ប្រាក់សាលា 20%</label>
+              <input id="paid20" name="paid20" type="number" min="0" />
+            </div>
+
+            <div class="field">
+              <label for="dailyPrice">តម្លៃក្នុងមួយថ្ងៃ</label>
+              <input id="dailyPrice" name="dailyPrice" type="number" min="0" />
+            </div>
+
+            <div class="field">
+              <label for="startDate">ថ្ងៃចាប់ផ្តើម</label>
+              <input id="startDate" name="startDate" type="date" />
+            </div>
+
+            <div class="field">
+              <label for="invoiceDate">ថ្ងៃបង់ប្រាក់</label>
+              <input id="invoiceDate" name="invoiceDate" type="date" />
+            </div>
+
+            <div class="field">
+              <label for="days">ចំនួនថ្ងៃក្នុង១ខែ</label>
+              <input id="days" name="days" type="number" min="0" value="30" />
+            </div>
+
+            <div class="field full">
+              <label for="note">សម្គាល់</label>
+              <textarea id="note" name="note" rows="3"></textarea>
+            </div>
+
+            <div class="form-actions full">
+              <button type="button" class="secondary-btn" id="resetFormBtn">សម្អាត</button>
+              <button type="submit" class="primary-btn" id="submitBtn">រក្សាទុក</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="view" id="recordsView">
+        <div class="panel">
+          <div class="panel-head filter-head">
+            <h3>កែទិន្នន័យលើ Web App</h3>
+
+            <div class="filter-row">
+              <select id="filterTeacher" class="dark-select">
+                <option value="">គ្រូទាំងអស់</option>
+              </select>
+
+              <input type="text" id="searchInput" placeholder="ស្វែងរកឈ្មោះសិស្ស..." />
             </div>
           </div>
-        </section>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ឈ្មោះសិស្ស</th>
+                  <th>ភេទ</th>
+                  <th>ថ្នាក់</th>
+                  <th>គ្រូ</th>
+                  <th>តម្លៃសិក្សា</th>
+                  <th>80%</th>
+                  <th>20%</th>
+                  <th>ថ្ងៃបង់</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="recordsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="reportsView">
+        <div class="panel">
+          <div class="panel-head filter-head">
+            <h3>របាយការណ៍ប្រចាំថ្ងៃ</h3>
+
+            <div class="filter-row">
+              <input type="date" id="reportDate" />
+
+              <select id="reportTeacher" class="dark-select">
+                <option value="">គ្រូទាំងអស់</option>
+              </select>
+
+              <button class="secondary-btn" id="previewReportBtn">Preview</button>
+              <button class="primary-btn" id="printDailyBtn">Print Daily Report</button>
+            </div>
+          </div>
+
+          <div class="stats-grid report-stats">
+            <div class="stat-card">
+              <span>ចំនួនសិស្ស</span>
+              <strong id="reportCount">0</strong>
+            </div>
+
+            <div class="stat-card">
+              <span>សរុបតម្លៃសិក្សា</span>
+              <strong id="reportMonthlyFee">0</strong>
+            </div>
+
+            <div class="stat-card">
+              <span>សរុបប្រាក់គ្រូ 80%</span>
+              <strong id="report80">0</strong>
+            </div>
+
+            <div class="stat-card">
+              <span>សរុបប្រាក់សាលា 20%</span>
+              <strong id="report20">0</strong>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ឈ្មោះសិស្ស</th>
+                  <th>ភេទ</th>
+                  <th>ថ្នាក់</th>
+                  <th>គ្រូ</th>
+                  <th>តម្លៃសិក្សា</th>
+                  <th>80%</th>
+                  <th>20%</th>
+                  <th>ថ្ងៃបង់</th>
+                </tr>
+              </thead>
+              <tbody id="reportTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="monthlyView">
+        <div class="panel">
+          <div class="panel-head filter-head">
+            <h3>របាយការណ៍ប្រចាំខែ</h3>
+
+            <div class="filter-row">
+              <input type="month" id="monthlyReportMonth" />
+
+              <select id="monthlyTeacher" class="dark-select">
+                <option value="">គ្រូទាំងអស់</option>
+              </select>
+
+              <button class="secondary-btn" id="previewMonthlyBtn">Preview</button>
+              <button class="primary-btn" id="printMonthlyBtn">Print Monthly Report</button>
+            </div>
+          </div>
+
+          <div class="stats-grid report-stats">
+            <div class="stat-card">
+              <span>ចំនួនសិស្ស</span>
+              <strong id="monthlyCount">0</strong>
+            </div>
+
+            <div class="stat-card">
+              <span>សរុបតម្លៃសិក្សា</span>
+              <strong id="monthlyFeeTotal">0</strong>
+            </div>
+
+            <div class="stat-card">
+              <span>សរុបប្រាក់គ្រូ 80%</span>
+              <strong id="monthly80">0</strong>
+            </div>
+
+            <div class="stat-card">
+              <span>សរុបប្រាក់សាលា 20%</span>
+              <strong id="monthly20">0</strong>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ឈ្មោះសិស្ស</th>
+                  <th>ភេទ</th>
+                  <th>ថ្នាក់</th>
+                  <th>គ្រូ</th>
+                  <th>តម្លៃសិក្សា</th>
+                  <th>80%</th>
+                  <th>20%</th>
+                  <th>ថ្ងៃបង់</th>
+                </tr>
+              </thead>
+              <tbody id="monthlyTableBody"></tbody>
+            </table>
+          </div>
+        </div>
       </section>
     </main>
   </div>
-  <script src="./script.js"></script>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
