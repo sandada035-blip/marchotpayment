@@ -1,9 +1,9 @@
 {
   "id": "/",
-  "name": "School Pay Version 2",
+  "name": "School Pay Version 4",
   "short_name": "SchoolPay",
-  "description": "PWA dashboard for student payment management with dashboard, records, reports, and role-based UI.",
-  "start_url": "./",
+  "description": "PWA Dashboard សម្រាប់គ្រប់គ្រងការបង់ប្រាក់សិស្ស និងរបាយការណ៍គ្រូ",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#071122",
