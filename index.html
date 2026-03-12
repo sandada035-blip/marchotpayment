@@ -34,6 +34,10 @@
 
       <form id="loginForm" class="form-grid one-col">
         <div>
+          <label>Google Apps Script Web App URL</label>
+          <input id="loginApiUrl" type="text" placeholder="Paste your deployed Web App URL" />
+        </div>
+        <div>
           <label>Username</label>
           <input id="loginUsername" type="text" placeholder="Enter username" autocomplete="username" />
         </div>
@@ -41,7 +45,10 @@
           <label>Password</label>
           <input id="loginPassword" type="password" placeholder="Enter password" autocomplete="current-password" />
         </div>
-        <button type="submit" class="primary-btn">ចូលប្រើប្រាស់</button>
+        <div class="inline-controls wrap">
+          <button type="button" id="testApiBtn" class="ghost-btn">Test API</button>
+          <button type="submit" class="primary-btn">ចូលប្រើប្រាស់</button>
+        </div>
         <p id="loginError" class="error-text"></p>
       </form>
     </div>
