@@ -1,880 +1,664 @@
-const API_URL = "https://script.google.com/macros/s/AKfycby1fD9n9I4zNujCg3OpSEBb834aTHBxjGXj5H4WhA1IpG-BrnZQ5O874q6l7W6xOcpJ7A/exec";
-const state = {
-  apiUrl: API_URL,
-  teachers: [],
-  summary: {
-    teacherCount: 0,
-    recordCount: 0,
-    total80: 0,
-    total20: 0
+const CONFIG = {
+  storageKeys: {
+    apiUrl: 'schoolpay_api_url',
+    session: 'schoolpay_session_v2'
   },
-  recent: [],
-  records: [],
-  reportRows: [],
-  monthlyRows: [],
-  chartInstance: null,
-  deferredPrompt: null
-};
-
-const els = {
-  views: document.querySelectorAll(".view"),
-  navBtns: document.querySelectorAll(".nav-btn"),
-  pageTitle: document.getElementById("pageTitle"),
-  apiStatus: document.getElementById("apiStatus"),
-  teacherCount: document.getElementById("teacherCount"),
-  recordCount: document.getElementById("recordCount"),
-  total80: document.getElementById("total80"),
-  total20: document.getElementById("total20"),
-  teacherList: document.getElementById("teacherList"),
-  recentRecords: document.getElementById("recentRecords"),
-  paymentForm: document.getElementById("paymentForm"),
-  resetFormBtn: document.getElementById("resetFormBtn"),
-  submitBtn: document.getElementById("submitBtn"),
-  teacherName: document.getElementById("teacherName"),
-  filterTeacher: document.getElementById("filterTeacher"),
-  recordsTableBody: document.getElementById("recordsTableBody"),
-  searchInput: document.getElementById("searchInput"),
-  toast: document.getElementById("toast"),
-  refreshBtn: document.getElementById("refreshBtn"),
-  installBtn: document.getElementById("installBtn"),
-  menuBtn: document.getElementById("menuBtn"),
-  sidebar: document.getElementById("sidebar"),
-
-  reportDate: document.getElementById("reportDate"),
-  reportTeacher: document.getElementById("reportTeacher"),
-  previewReportBtn: document.getElementById("previewReportBtn"),
-  printDailyBtn: document.getElementById("printDailyBtn"),
-  reportTableBody: document.getElementById("reportTableBody"),
-  reportCount: document.getElementById("reportCount"),
-  reportMonthlyFee: document.getElementById("reportMonthlyFee"),
-  report80: document.getElementById("report80"),
-  report20: document.getElementById("report20"),
-
-  monthlyReportMonth: document.getElementById("monthlyReportMonth"),
-  monthlyTeacher: document.getElementById("monthlyTeacher"),
-  previewMonthlyBtn: document.getElementById("previewMonthlyBtn"),
-  printMonthlyBtn: document.getElementById("printMonthlyBtn"),
-  monthlyTableBody: document.getElementById("monthlyTableBody"),
-  monthlyCount: document.getElementById("monthlyCount"),
-  monthlyFeeTotal: document.getElementById("monthlyFeeTotal"),
-  monthly80: document.getElementById("monthly80"),
-  monthly20: document.getElementById("monthly20"),
-
-  chartType: document.getElementById("chartType"),
-  chartMetric: document.getElementById("chartMetric"),
-  refreshChartBtn: document.getElementById("refreshChartBtn"),
-  dashboardChart: document.getElementById("dashboardChart")
-};
-
-document.addEventListener("DOMContentLoaded", init);
-
-function init() {
-  bindEvents();
-  registerSW();
-  updateApiStatus();
-
-  const today = new Date().toISOString().slice(0, 10);
-  const now = new Date();
-  const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-
-  if (els.reportDate) els.reportDate.value = today;
-  if (els.monthlyReportMonth) els.monthlyReportMonth.value = monthStr;
-
-  const invoiceDateEl = document.getElementById("invoiceDate");
-  const startDateEl = document.getElementById("startDate");
-  if (invoiceDateEl) invoiceDateEl.value = today;
-  if (startDateEl) startDateEl.value = today;
-
-  if (state.apiUrl) {
-    bootstrapData();
-  } else {
-    updateApiStatus(false);
-    showToast("សូមដាក់ API URL ក្នុង script.js");
+  defaultApiUrl: '',
+  users: {
+    admin: { username: 'admin', password: 'admin123', role: 'admin', name: 'Administrator' },
+    viewer: { username: 'user', password: 'user123', role: 'viewer', name: 'Viewer User' }
   }
+};
+
+const state = {
+  apiUrl: localStorage.getItem(CONFIG.storageKeys.apiUrl) || CONFIG.defaultApiUrl,
+  session: loadSession(),
+  records: [],
+  filteredRecords: [],
+  teachers: [],
+  summary: { teacherCount: 0, recordCount: 0, total80: 0, total20: 0 },
+  editingId: null,
+  deferredPrompt: null,
+  currentView: 'dashboardView'
+};
+
+const els = {};
+
+document.addEventListener('DOMContentLoaded', initApp);
+
+function initApp() {
+  bindElements();
+  bindEvents();
+  initSettings();
+  registerServiceWorker();
+  setupInstallPrompt();
+  renderAuth();
+}
+
+function bindElements() {
+  const ids = [
+    'appLoader','loginView','appView','loginForm','loginUsername','loginPassword','loginError','userRoleBadge','currentUserText',
+    'logoutBtn','refreshBtn','installBtn','pageTitle','statusText','apiBadge','gotoFormBtn','gotoRecordsBtn','teacherCount',
+    'recordCount','total80','total20','recentList','chartCanvas','chartTypeSelect','refreshChartBtn','recordForm','recordId',
+    'formTitle','formSubtitle','resetFormBtn','studentName','gender','studentClass','teacherName','teacherOptions','monthlyFee',
+    'paid80','paid20','dailyPrice','startDate','invoiceDate','days','note','cancelEditBtn','searchInput','teacherFilter',
+    'classFilter','recordsTableBody','teacherCards','classSummary','genderSummary','apiUrlInput','saveSettingsBtn',
+    'clearSettingsBtn','exportCsvBtn'
+  ];
+  ids.forEach((id) => (els[id] = document.getElementById(id)));
+  els.navBtns = Array.from(document.querySelectorAll('.nav-btn'));
+  els.views = Array.from(document.querySelectorAll('.view-section'));
 }
 
 function bindEvents() {
-  els.navBtns.forEach(btn => {
-    btn.addEventListener("click", () => switchView(btn.dataset.view));
-  });
+  els.loginForm.addEventListener('submit', handleLogin);
+  els.logoutBtn.addEventListener('click', logout);
+  els.refreshBtn.addEventListener('click', bootstrapData);
+  els.gotoFormBtn.addEventListener('click', () => switchView('formView'));
+  els.gotoRecordsBtn.addEventListener('click', () => switchView('recordsView'));
+  els.refreshChartBtn.addEventListener('click', drawChart);
+  els.recordForm.addEventListener('submit', submitRecord);
+  els.resetFormBtn.addEventListener('click', resetForm);
+  els.cancelEditBtn.addEventListener('click', cancelEdit);
+  els.searchInput.addEventListener('input', applyFilters);
+  els.teacherFilter.addEventListener('change', applyFilters);
+  els.classFilter.addEventListener('change', applyFilters);
+  els.saveSettingsBtn.addEventListener('click', saveApiUrl);
+  els.clearSettingsBtn.addEventListener('click', clearApiUrl);
+  els.exportCsvBtn.addEventListener('click', exportCsv);
+  els.monthlyFee.addEventListener('input', autoCalculateShares);
+  els.installBtn.addEventListener('click', installApp);
 
-  document.querySelectorAll("[data-go]").forEach(btn => {
-    btn.addEventListener("click", () => switchView(btn.dataset.go));
-  });
-
-  els.paymentForm?.addEventListener("submit", submitPaymentForm);
-  els.resetFormBtn?.addEventListener("click", resetForm);
-  els.filterTeacher?.addEventListener("change", renderRecordsTable);
-  els.searchInput?.addEventListener("input", renderRecordsTable);
-  els.refreshBtn?.addEventListener("click", bootstrapData);
-  els.menuBtn?.addEventListener("click", () => els.sidebar.classList.toggle("open"));
-
-  const monthlyFeeEl = document.getElementById("monthlyFee");
-  const daysEl = document.getElementById("days");
-  if (monthlyFeeEl) monthlyFeeEl.addEventListener("input", autoCalculateSplit);
-  if (daysEl) daysEl.addEventListener("input", autoCalculateDailyPrice);
-
-  els.previewReportBtn?.addEventListener("click", previewDailyReport);
-  els.printDailyBtn?.addEventListener("click", printDailyReport);
-  els.reportTeacher?.addEventListener("change", previewDailyReport);
-  els.reportDate?.addEventListener("change", previewDailyReport);
-
-  els.previewMonthlyBtn?.addEventListener("click", previewMonthlyReport);
-  els.printMonthlyBtn?.addEventListener("click", printMonthlyReport);
-  els.monthlyTeacher?.addEventListener("change", previewMonthlyReport);
-  els.monthlyReportMonth?.addEventListener("change", previewMonthlyReport);
-
-  els.refreshChartBtn?.addEventListener("click", renderDashboardChart);
-  els.chartType?.addEventListener("change", renderDashboardChart);
-  els.chartMetric?.addEventListener("change", renderDashboardChart);
-
-  window.addEventListener("beforeinstallprompt", e => {
-    e.preventDefault();
-    state.deferredPrompt = e;
-    els.installBtn.classList.remove("hidden");
-  });
-
-  els.installBtn?.addEventListener("click", async () => {
-    if (!state.deferredPrompt) return;
-    state.deferredPrompt.prompt();
-    await state.deferredPrompt.userChoice;
-    state.deferredPrompt = null;
-    els.installBtn.classList.add("hidden");
+  els.navBtns.forEach((btn) => {
+    btn.addEventListener('click', () => switchView(btn.dataset.view));
   });
 }
 
-function switchView(viewName) {
-  const titles = {
-    dashboard: "Dashboard",
-    payments: "បញ្ចូលការបង់ប្រាក់",
-    records: "កែទិន្នន័យ",
-    reports: "របាយការណ៍ប្រចាំថ្ងៃ",
-    monthly: "របាយការណ៍ប្រចាំខែ"
-  };
-
-  els.views.forEach(v => v.classList.remove("active"));
-  const target = document.getElementById(`${viewName}View`);
-  if (target) target.classList.add("active");
-
-  els.navBtns.forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.view === viewName);
-  });
-
-  els.pageTitle.textContent = titles[viewName] || "Dashboard";
-  els.sidebar.classList.remove("open");
-
-  if (viewName === "reports") previewDailyReport();
-  if (viewName === "monthly") previewMonthlyReport();
-  if (viewName === "dashboard") renderDashboardChart();
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(CONFIG.storageKeys.session);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
 }
 
-function updateApiStatus(connected = null) {
-  if (!state.apiUrl) {
-    els.apiStatus.textContent = "API: Missing";
+function saveSession(session) {
+  localStorage.setItem(CONFIG.storageKeys.session, JSON.stringify(session));
+}
+
+function clearSession() {
+  localStorage.removeItem(CONFIG.storageKeys.session);
+}
+
+function renderAuth() {
+  els.appLoader.classList.add('hidden');
+  if (!state.session) {
+    els.loginView.classList.remove('hidden');
+    els.appView.classList.add('hidden');
     return;
   }
 
-  if (connected === true) {
-    els.apiStatus.textContent = "API: Connected";
-  } else if (connected === false) {
-    els.apiStatus.textContent = "API: Error";
-  } else {
-    els.apiStatus.textContent = "API: Ready";
+  els.loginView.classList.add('hidden');
+  els.appView.classList.remove('hidden');
+  els.userRoleBadge.textContent = state.session.role;
+  els.currentUserText.textContent = state.session.name;
+  els.apiUrlInput.value = state.apiUrl;
+  applyRoleUi();
+  bootstrapData();
+}
+
+function handleLogin(event) {
+  event.preventDefault();
+  const username = els.loginUsername.value.trim();
+  const password = els.loginPassword.value.trim();
+
+  const matched = Object.values(CONFIG.users).find(
+    (user) => user.username === username && user.password === password
+  );
+
+  if (!matched) {
+    els.loginError.textContent = 'Username ឬ Password មិនត្រឹមត្រូវ';
+    return;
   }
+
+  state.session = { username: matched.username, role: matched.role, name: matched.name };
+  saveSession(state.session);
+  els.loginError.textContent = '';
+  els.loginForm.reset();
+  renderAuth();
+}
+
+function logout() {
+  clearSession();
+  state.session = null;
+  state.records = [];
+  state.filteredRecords = [];
+  renderAuth();
+}
+
+function applyRoleUi() {
+  const isAdmin = state.session?.role === 'admin';
+  els.formSubtitle.textContent = isAdmin
+    ? 'Admin អាចបន្ថែម កែប្រែ និងលុបទិន្នន័យបាន។'
+    : 'Viewer អាចមើលបានតែប៉ុណ្ណោះ។';
+  els.recordForm.querySelectorAll('input, select, textarea, button[type="submit"]').forEach((el) => {
+    if (el.id === 'cancelEditBtn') return;
+    el.disabled = !isAdmin;
+  });
+  els.exportCsvBtn.disabled = false;
 }
 
 async function bootstrapData() {
-  if (!state.apiUrl) return;
+  if (!state.apiUrl) {
+    updateStatus('សូមកំណត់ Google Apps Script Web App URL ជាមុនសិន', false);
+    switchView('settingsView');
+    return;
+  }
 
   try {
-    const data = await apiGet("action=init");
-    if (!data.success) throw new Error(data.message || "Init failed");
+    updateStatus('កំពុងទាញទិន្នន័យ...', true);
+    const data = await apiGet('action=init');
+    if (!data.success) throw new Error(data.message || 'Init failed');
 
-    state.teachers = Array.isArray(data.teachers) ? data.teachers : [];
-    state.summary = data.summary || { teacherCount: 0, recordCount: 0, total80: 0, total20: 0 };
-    state.recent = Array.isArray(data.recent) ? data.recent : [];
     state.records = Array.isArray(data.records) ? data.records : [];
+    state.teachers = Array.isArray(data.teachers) ? data.teachers : [];
+    state.summary = data.summary || state.summary;
+    state.filteredRecords = [...state.records];
 
-    fillTeacherSelects();
     renderDashboard();
-    renderRecordsTable();
-    previewDailyReport();
-    previewMonthlyReport();
-    renderDashboardChart();
-    updateApiStatus(true);
-  } catch (err) {
-    console.error(err);
-    updateApiStatus(false);
-    showToast(err.message || "មានបញ្ហាក្នុងការទាញទិន្នន័យ");
+    buildFilters();
+    applyFilters();
+    renderTeacherReports();
+    renderSummaryReports();
+    populateTeacherOptions();
+    updateStatus('ទិន្នន័យបានធ្វើបច្ចុប្បន្នភាព', true);
+  } catch (error) {
+    console.error(error);
+    updateStatus(`មានបញ្ហា: ${error.message}`, false);
   }
 }
 
-function fillTeacherSelects() {
-  const teacherOptions = [
-    '<option value="">ជ្រើសរើសគ្រូ</option>',
-    ...state.teachers.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`)
-  ].join("");
+function updateStatus(message, connected) {
+  els.statusText.textContent = message;
+  els.apiBadge.textContent = connected ? 'API: Connected' : 'API: Error';
+  els.apiBadge.style.color = connected ? '#9be7c4' : '#ffb4b4';
+}
 
-  if (els.teacherName) els.teacherName.innerHTML = teacherOptions;
+function initSettings() {
+  els.apiUrlInput.value = state.apiUrl;
+}
 
-  if (els.filterTeacher) {
-    els.filterTeacher.innerHTML = [
-      '<option value="">គ្រូទាំងអស់</option>',
-      ...state.teachers.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`)
-    ].join("");
-  }
+function saveApiUrl() {
+  const value = els.apiUrlInput.value.trim();
+  localStorage.setItem(CONFIG.storageKeys.apiUrl, value);
+  state.apiUrl = value;
+  updateStatus('បានរក្សាទុក API URL', true);
+}
 
-  if (els.reportTeacher) {
-    els.reportTeacher.innerHTML = [
-      '<option value="">គ្រូទាំងអស់</option>',
-      ...state.teachers.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`)
-    ].join("");
-  }
+function clearApiUrl() {
+  localStorage.removeItem(CONFIG.storageKeys.apiUrl);
+  state.apiUrl = '';
+  els.apiUrlInput.value = '';
+  updateStatus('បានលុប API URL', false);
+}
 
-  if (els.monthlyTeacher) {
-    els.monthlyTeacher.innerHTML = [
-      '<option value="">គ្រូទាំងអស់</option>',
-      ...state.teachers.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`)
-    ].join("");
-  }
+async function apiGet(queryString) {
+  const separator = state.apiUrl.includes('?') ? '&' : '?';
+  const url = `${state.apiUrl}${separator}${queryString}&_ts=${Date.now()}`;
+  const res = await fetch(url, { method: 'GET', cache: 'no-store' });
+  if (!res.ok) throw new Error('API GET error');
+  return res.json();
+}
+
+async function apiPost(action, payload) {
+  const res = await fetch(state.apiUrl, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action, payload })
+  });
+  if (!res.ok) throw new Error('API POST error');
+  return res.json();
 }
 
 function renderDashboard() {
-  els.teacherCount.textContent = formatInt(state.summary.teacherCount);
-  els.recordCount.textContent = formatInt(state.summary.recordCount);
-  els.total80.textContent = formatKHR(state.summary.total80);
-  els.total20.textContent = formatKHR(state.summary.total20);
+  els.teacherCount.textContent = formatNumber(state.summary.teacherCount || 0);
+  els.recordCount.textContent = formatNumber(state.summary.recordCount || 0);
+  els.total80.textContent = `${formatNumber(state.summary.total80 || 0)} KHR`;
+  els.total20.textContent = `${formatNumber(state.summary.total20 || 0)} KHR`;
+  renderRecentList();
+  drawChart();
+}
 
-  els.teacherList.innerHTML = state.teachers.length
-    ? state.teachers.map(t => `
-      <div class="teacher-item">
-        <div>
-          <strong>${escapeHtml(t.name)}</strong>
-          <div class="muted">${formatInt(t.count || 0)} records</div>
-        </div>
-        <span class="badge">Sheet</span>
-      </div>
-    `).join("")
-    : `<div class="teacher-item">មិនទាន់មាន Teacher Sheets</div>`;
+function renderRecentList() {
+  const list = state.records.slice(-8).reverse();
+  els.recentList.innerHTML = list.length
+    ? list
+        .map(
+          (r) => `
+        <div class="recent-item">
+          <strong>${escapeHtml(r.studentName || '')}</strong>
+          <div class="muted-row">${escapeHtml(r.teacherName || '-')} • ${escapeHtml(r.studentClass || '-')}</div>
+          <div class="muted-row">${formatNumber(r.monthlyFee || 0)} KHR • ${escapeHtml(r.invoiceDate || '-')}</div>
+        </div>`
+        )
+        .join('')
+    : '<div class="recent-item">មិនទាន់មានទិន្នន័យ</div>';
+}
 
-  els.recentRecords.innerHTML = state.recent.length
-    ? state.recent.map(r => `
-      <div class="recent-item">
-        <strong>${escapeHtml(r.studentName || "")}</strong>
-        <div class="muted">${escapeHtml(r.teacherName || "")}</div>
-        <div>${formatKHR(r.monthlyFee)} | 80%: ${formatKHR(r.paid80)} | 20%: ${formatKHR(r.paid20)}</div>
-        <div class="muted">ថ្នាក់: ${escapeHtml(r.studentClass || "")} | ថ្ងៃបង់: ${escapeHtml(r.invoiceDate || "")}</div>
-      </div>
-    `).join("")
-    : `<div class="recent-item">មិនទាន់មានកំណត់ត្រា</div>`;
+function populateTeacherOptions() {
+  const names = [...new Set(state.teachers.map((t) => t.name).filter(Boolean))].sort();
+  els.teacherOptions.innerHTML = names.map((name) => `<option value="${escapeHtml(name)}"></option>`).join('');
+}
+
+function buildFilters() {
+  const teacherNames = ['គ្រូទាំងអស់', ...new Set(state.records.map((r) => r.teacherName).filter(Boolean))];
+  const classNames = ['ថ្នាក់ទាំងអស់', ...new Set(state.records.map((r) => r.studentClass).filter(Boolean))];
+  els.teacherFilter.innerHTML = teacherNames.map((t) => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+  els.classFilter.innerHTML = classNames.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+}
+
+function applyFilters() {
+  const term = (els.searchInput.value || '').trim().toLowerCase();
+  const teacher = els.teacherFilter.value;
+  const studentClass = els.classFilter.value;
+
+  state.filteredRecords = state.records.filter((r) => {
+    const haystack = [r.studentName, r.teacherName, r.studentClass, r.gender, r.note]
+      .join(' ')
+      .toLowerCase();
+    const matchesTerm = !term || haystack.includes(term);
+    const matchesTeacher = !teacher || teacher === 'គ្រូទាំងអស់' || r.teacherName === teacher;
+    const matchesClass = !studentClass || studentClass === 'ថ្នាក់ទាំងអស់' || r.studentClass === studentClass;
+    return matchesTerm && matchesTeacher && matchesClass;
+  });
+
+  renderRecordsTable();
 }
 
 function renderRecordsTable() {
-  const teacher = (els.filterTeacher?.value || "").trim();
-  const search = (els.searchInput?.value || "").trim().toLowerCase();
-
-  let rows = [...state.records];
-
-  if (teacher) {
-    rows = rows.filter(r => String(r.teacherName || "") === teacher);
-  }
-
-  if (search) {
-    rows = rows.filter(r => String(r.studentName || "").toLowerCase().includes(search));
-  }
-
-  rows.sort((a, b) => new Date(b.invoiceDate || 0) - new Date(a.invoiceDate || 0));
-
-  els.recordsTableBody.innerHTML = rows.length
-    ? rows.map(r => `
+  const isAdmin = state.session?.role === 'admin';
+  els.recordsTableBody.innerHTML = state.filteredRecords.length
+    ? state.filteredRecords
+        .map(
+          (r) => `
       <tr>
-        <td>${escapeHtml(r.studentName || "")}</td>
-        <td>${escapeHtml(r.gender || "")}</td>
-        <td>${escapeHtml(r.studentClass || "")}</td>
-        <td>${escapeHtml(r.teacherName || "")}</td>
-        <td>${formatKHR(r.monthlyFee)}</td>
-        <td>${formatKHR(r.paid80)}</td>
-        <td>${formatKHR(r.paid20)}</td>
-        <td>${escapeHtml(r.invoiceDate || "")}</td>
+        <td>${escapeHtml(r.studentName || '')}</td>
+        <td>${escapeHtml(r.gender || '')}</td>
+        <td>${escapeHtml(r.studentClass || '')}</td>
+        <td>${escapeHtml(r.teacherName || '')}</td>
+        <td>${formatNumber(r.monthlyFee || 0)}</td>
+        <td>${formatNumber(r.paid80 || 0)}</td>
+        <td>${formatNumber(r.paid20 || 0)}</td>
+        <td>${escapeHtml(r.startDate || '')}</td>
+        <td>${escapeHtml(r.invoiceDate || '')}</td>
+        <td>${formatNumber(r.days || 0)}</td>
+        <td><small>${escapeHtml(r.note || '')}</small></td>
         <td>
           <div class="table-actions">
-            <button class="small-btn edit-btn" onclick="editRecord('${escapeJs(r.recordId)}')">Edit</button>
-            <button class="small-btn secondary-btn" onclick="exportInvoicePdf('${escapeJs(r.recordId)}')">PDF</button>
-            <button class="small-btn delete-btn" onclick="deleteRecord('${escapeJs(r.recordId)}')">Delete</button>
+            <button class="btn-sm btn-view" data-action="view" data-id="${escapeHtml(r.recordId || '')}">View</button>
+            ${isAdmin ? `<button class="btn-sm btn-edit" data-action="edit" data-id="${escapeHtml(r.recordId || '')}">Edit</button>` : ''}
+            ${isAdmin ? `<button class="btn-sm btn-del" data-action="delete" data-id="${escapeHtml(r.recordId || '')}">Delete</button>` : ''}
           </div>
         </td>
-      </tr>
-    `).join("")
-    : `<tr><td colspan="9">មិនមានទិន្នន័យ</td></tr>`;
-}
+      </tr>`
+        )
+        .join('')
+    : '<tr><td colspan="12">មិនមានទិន្នន័យ</td></tr>';
 
-function previewDailyReport() {
-  const selectedDate = (els.reportDate?.value || "").trim();
-  const selectedTeacher = (els.reportTeacher?.value || "").trim();
-
-  let rows = [...state.records];
-
-  if (selectedDate) {
-    rows = rows.filter(r => normalizeDate(r.invoiceDate) === selectedDate);
-  }
-
-  if (selectedTeacher) {
-    rows = rows.filter(r => String(r.teacherName || "") === selectedTeacher);
-  }
-
-  rows.sort((a, b) => String(a.teacherName || "").localeCompare(String(b.teacherName || "")));
-  state.reportRows = rows;
-
-  const totalCount = rows.length;
-  const totalFee = rows.reduce((sum, r) => sum + moneyToNumber(r.monthlyFee), 0);
-  const total80 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid80), 0);
-  const total20 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid20), 0);
-
-  if (els.reportCount) els.reportCount.textContent = formatInt(totalCount);
-  if (els.reportMonthlyFee) els.reportMonthlyFee.textContent = formatKHR(totalFee);
-  if (els.report80) els.report80.textContent = formatKHR(total80);
-  if (els.report20) els.report20.textContent = formatKHR(total20);
-
-  if (els.reportTableBody) {
-    els.reportTableBody.innerHTML = rows.length
-      ? rows.map(r => `
-        <tr>
-          <td>${escapeHtml(r.studentName || "")}</td>
-          <td>${escapeHtml(r.gender || "")}</td>
-          <td>${escapeHtml(r.studentClass || "")}</td>
-          <td>${escapeHtml(r.teacherName || "")}</td>
-          <td>${formatKHR(r.monthlyFee)}</td>
-          <td>${formatKHR(r.paid80)}</td>
-          <td>${formatKHR(r.paid20)}</td>
-          <td>${escapeHtml(r.invoiceDate || "")}</td>
-        </tr>
-      `).join("")
-      : `<tr><td colspan="8">មិនមានទិន្នន័យសម្រាប់ថ្ងៃនេះ</td></tr>`;
-  }
-}
-
-function previewMonthlyReport() {
-  const selectedMonth = (els.monthlyReportMonth?.value || "").trim();
-  const selectedTeacher = (els.monthlyTeacher?.value || "").trim();
-
-  let rows = [...state.records];
-
-  if (selectedMonth) {
-    rows = rows.filter(r => {
-      const d = normalizeDate(r.invoiceDate);
-      return d && d.slice(0, 7) === selectedMonth;
-    });
-  }
-
-  if (selectedTeacher) {
-    rows = rows.filter(r => String(r.teacherName || "") === selectedTeacher);
-  }
-
-  rows.sort((a, b) => new Date(a.invoiceDate || 0) - new Date(b.invoiceDate || 0));
-  state.monthlyRows = rows;
-
-  const totalCount = rows.length;
-  const totalFee = rows.reduce((sum, r) => sum + moneyToNumber(r.monthlyFee), 0);
-  const total80 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid80), 0);
-  const total20 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid20), 0);
-
-  if (els.monthlyCount) els.monthlyCount.textContent = formatInt(totalCount);
-  if (els.monthlyFeeTotal) els.monthlyFeeTotal.textContent = formatKHR(totalFee);
-  if (els.monthly80) els.monthly80.textContent = formatKHR(total80);
-  if (els.monthly20) els.monthly20.textContent = formatKHR(total20);
-
-  if (els.monthlyTableBody) {
-    els.monthlyTableBody.innerHTML = rows.length
-      ? rows.map(r => `
-        <tr>
-          <td>${escapeHtml(r.studentName || "")}</td>
-          <td>${escapeHtml(r.gender || "")}</td>
-          <td>${escapeHtml(r.studentClass || "")}</td>
-          <td>${escapeHtml(r.teacherName || "")}</td>
-          <td>${formatKHR(r.monthlyFee)}</td>
-          <td>${formatKHR(r.paid80)}</td>
-          <td>${formatKHR(r.paid20)}</td>
-          <td>${escapeHtml(r.invoiceDate || "")}</td>
-        </tr>
-      `).join("")
-      : `<tr><td colspan="8">មិនមានទិន្នន័យសម្រាប់ខែនេះ</td></tr>`;
-  }
-}
-
-function renderDashboardChart() {
-  if (!els.dashboardChart || typeof Chart === "undefined") return;
-
-  const type = els.chartType?.value || "teacher";
-  const metric = els.chartMetric?.value || "monthlyFee";
-  const grouped = {};
-
-  if (type === "teacher") {
-    state.records.forEach(r => {
-      const key = r.teacherName || "Unknown";
-      if (!grouped[key]) grouped[key] = { count: 0, monthlyFee: 0, paid80: 0, paid20: 0 };
-      grouped[key].count += 1;
-      grouped[key].monthlyFee += moneyToNumber(r.monthlyFee);
-      grouped[key].paid80 += moneyToNumber(r.paid80);
-      grouped[key].paid20 += moneyToNumber(r.paid20);
-    });
-  } else {
-    state.records.forEach(r => {
-      const key = normalizeDate(r.invoiceDate) || "Unknown";
-      if (!grouped[key]) grouped[key] = { count: 0, monthlyFee: 0, paid80: 0, paid20: 0 };
-      grouped[key].count += 1;
-      grouped[key].monthlyFee += moneyToNumber(r.monthlyFee);
-      grouped[key].paid80 += moneyToNumber(r.paid80);
-      grouped[key].paid20 += moneyToNumber(r.paid20);
-    });
-  }
-
-  const labels = Object.keys(grouped).sort();
-  const data = labels.map(label => grouped[label][metric]);
-
-  if (state.chartInstance) state.chartInstance.destroy();
-
-  state.chartInstance = new Chart(els.dashboardChart, {
-    type: "bar",
-    data: {
-      labels,
-      datasets: [{ label: metric, data }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: true } },
-      scales: { y: { beginAtZero: true } }
-    }
+  els.recordsTableBody.querySelectorAll('button[data-action]').forEach((btn) => {
+    btn.addEventListener('click', () => handleTableAction(btn.dataset.action, btn.dataset.id));
   });
 }
 
-function printDailyReport() {
-  const reportDate = els.reportDate?.value || "";
-  const teacherName = els.reportTeacher?.value || "";
-  const rows = state.reportRows || [];
+function handleTableAction(action, id) {
+  const record = state.records.find((r) => r.recordId === id);
+  if (!record) return;
 
-  if (!rows.length) {
-    showToast("មិនមានទិន្នន័យសម្រាប់ print");
+  if (action === 'view') {
+    fillForm(record, true);
+    switchView('formView');
     return;
   }
 
-  const totalFee = rows.reduce((sum, r) => sum + moneyToNumber(r.monthlyFee), 0);
-  const total80 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid80), 0);
-  const total20 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid20), 0);
+  if (state.session?.role !== 'admin') return;
 
-  const html = `
-    <html>
-      <head>
-        <title>Daily Report</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
-          h1, h2, p { margin: 0 0 10px; }
-          .summary { display:flex; gap:16px; flex-wrap:wrap; margin:18px 0; }
-          .box { border:1px solid #ccc; border-radius:10px; padding:12px 16px; min-width:180px; }
-          table { width:100%; border-collapse:collapse; margin-top:18px; }
-          th, td { border:1px solid #333; padding:8px; text-align:left; }
-          th { background:#f3f4f6; }
-        </style>
-      </head>
-      <body>
-        <h1>School Pay</h1>
-        <h2>របាយការណ៍ប្រចាំថ្ងៃ</h2>
-        <p><strong>ថ្ងៃបង់ប្រាក់:</strong> ${escapeHtml(reportDate || "ទាំងអស់")}</p>
-        <p><strong>គ្រូ:</strong> ${escapeHtml(teacherName || "គ្រូទាំងអស់")}</p>
-
-        <div class="summary">
-          <div class="box"><strong>ចំនួនសិស្ស</strong><br>${formatInt(rows.length)}</div>
-          <div class="box"><strong>សរុបតម្លៃសិក្សា</strong><br>${formatKHR(totalFee)}</div>
-          <div class="box"><strong>សរុបប្រាក់គ្រូ 80%</strong><br>${formatKHR(total80)}</div>
-          <div class="box"><strong>សរុបប្រាក់សាលា 20%</strong><br>${formatKHR(total20)}</div>
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>ឈ្មោះសិស្ស</th>
-              <th>ភេទ</th>
-              <th>ថ្នាក់</th>
-              <th>គ្រូ</th>
-              <th>តម្លៃសិក្សា</th>
-              <th>80%</th>
-              <th>20%</th>
-              <th>ថ្ងៃបង់</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.map(r => `
-              <tr>
-                <td>${escapeHtml(r.studentName || "")}</td>
-                <td>${escapeHtml(r.gender || "")}</td>
-                <td>${escapeHtml(r.studentClass || "")}</td>
-                <td>${escapeHtml(r.teacherName || "")}</td>
-                <td>${formatKHR(r.monthlyFee)}</td>
-                <td>${formatKHR(r.paid80)}</td>
-                <td>${formatKHR(r.paid20)}</td>
-                <td>${escapeHtml(r.invoiceDate || "")}</td>
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      </body>
-    </html>
-  `;
-
-  const w = window.open("", "_blank", "width=1200,height=800");
-  if (!w) return showToast("Browser បានបិទ popup សម្រាប់ print");
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-  w.focus();
-  setTimeout(() => w.print(), 400);
-}
-
-function printMonthlyReport() {
-  const selectedMonth = els.monthlyReportMonth?.value || "";
-  const teacherName = els.monthlyTeacher?.value || "";
-  const rows = state.monthlyRows || [];
-
-  if (!rows.length) {
-    showToast("មិនមានទិន្នន័យសម្រាប់ print");
+  if (action === 'edit') {
+    fillForm(record, false);
+    switchView('formView');
     return;
   }
 
-  const totalFee = rows.reduce((sum, r) => sum + moneyToNumber(r.monthlyFee), 0);
-  const total80 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid80), 0);
-  const total20 = rows.reduce((sum, r) => sum + moneyToNumber(r.paid20), 0);
-
-  const html = `
-    <html>
-      <head>
-        <title>Monthly Report</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
-          .summary { display:flex; gap:16px; flex-wrap:wrap; margin:18px 0; }
-          .box { border:1px solid #ccc; border-radius:10px; padding:12px 16px; min-width:180px; }
-          table { width:100%; border-collapse:collapse; margin-top:18px; }
-          th, td { border:1px solid #333; padding:8px; text-align:left; }
-          th { background:#f3f4f6; }
-        </style>
-      </head>
-      <body>
-        <h1>របាយការណ៍ប្រចាំខែ</h1>
-        <p><strong>ខែ:</strong> ${escapeHtml(selectedMonth || "ទាំងអស់")}</p>
-        <p><strong>គ្រូ:</strong> ${escapeHtml(teacherName || "គ្រូទាំងអស់")}</p>
-
-        <div class="summary">
-          <div class="box"><strong>ចំនួនសិស្ស</strong><br>${formatInt(rows.length)}</div>
-          <div class="box"><strong>សរុបតម្លៃសិក្សា</strong><br>${formatKHR(totalFee)}</div>
-          <div class="box"><strong>សរុបប្រាក់គ្រូ 80%</strong><br>${formatKHR(total80)}</div>
-          <div class="box"><strong>សរុបប្រាក់សាលា 20%</strong><br>${formatKHR(total20)}</div>
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>ឈ្មោះសិស្ស</th>
-              <th>ភេទ</th>
-              <th>ថ្នាក់</th>
-              <th>គ្រូ</th>
-              <th>តម្លៃសិក្សា</th>
-              <th>80%</th>
-              <th>20%</th>
-              <th>ថ្ងៃបង់</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.map(r => `
-              <tr>
-                <td>${escapeHtml(r.studentName || "")}</td>
-                <td>${escapeHtml(r.gender || "")}</td>
-                <td>${escapeHtml(r.studentClass || "")}</td>
-                <td>${escapeHtml(r.teacherName || "")}</td>
-                <td>${formatKHR(r.monthlyFee)}</td>
-                <td>${formatKHR(r.paid80)}</td>
-                <td>${formatKHR(r.paid20)}</td>
-                <td>${escapeHtml(r.invoiceDate || "")}</td>
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      </body>
-    </html>
-  `;
-
-  const w = window.open("", "_blank", "width=1200,height=800");
-  if (!w) return showToast("Browser បានបិទ popup");
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-  w.focus();
-  setTimeout(() => w.print(), 400);
-}
-
-window.exportInvoicePdf = function(recordId) {
-  const r = state.records.find(x => String(x.recordId) === String(recordId));
-  if (!r) return showToast("រកមិនឃើញ invoice");
-
-  const html = `
-    <html>
-      <head>
-        <title>Invoice</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
-          .invoice { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 24px; border-radius: 12px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-          td, th { border: 1px solid #ccc; padding: 10px; text-align: left; }
-          th { background: #f3f4f6; width: 35%; }
-        </style>
-      </head>
-      <body>
-        <div class="invoice">
-          <h1>School Pay</h1>
-          <h2>Invoice</h2>
-          <table>
-            <tr><th>ឈ្មោះសិស្ស</th><td>${escapeHtml(r.studentName || "")}</td></tr>
-            <tr><th>ភេទ</th><td>${escapeHtml(r.gender || "")}</td></tr>
-            <tr><th>ថ្នាក់</th><td>${escapeHtml(r.studentClass || "")}</td></tr>
-            <tr><th>គ្រូ</th><td>${escapeHtml(r.teacherName || "")}</td></tr>
-            <tr><th>តម្លៃសិក្សា</th><td>${formatKHR(r.monthlyFee)}</td></tr>
-            <tr><th>ប្រាក់គ្រូ 80%</th><td>${formatKHR(r.paid80)}</td></tr>
-            <tr><th>ប្រាក់សាលា 20%</th><td>${formatKHR(r.paid20)}</td></tr>
-            <tr><th>ថ្ងៃចាប់ផ្តើម</th><td>${escapeHtml(r.startDate || "")}</td></tr>
-            <tr><th>ថ្ងៃបង់ប្រាក់</th><td>${escapeHtml(r.invoiceDate || "")}</td></tr>
-            <tr><th>ចំនួនថ្ងៃ</th><td>${escapeHtml(String(r.days || ""))}</td></tr>
-          </table>
-        </div>
-      </body>
-    </html>
-  `;
-
-  const w = window.open("", "_blank", "width=900,height=700");
-  if (!w) return showToast("Browser បានបិទ popup");
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-  w.focus();
-  setTimeout(() => w.print(), 300);
-};
-
-function autoCalculateSplit() {
-  const monthlyFee = moneyToNumber(document.getElementById("monthlyFee").value);
-  const paid80El = document.getElementById("paid80");
-  const paid20El = document.getElementById("paid20");
-
-  if (paid80El) paid80El.value = Math.round(monthlyFee * 0.8);
-  if (paid20El) paid20El.value = Math.round(monthlyFee * 0.2);
-  autoCalculateDailyPrice();
-}
-
-function autoCalculateDailyPrice() {
-  const monthlyFee = moneyToNumber(document.getElementById("monthlyFee").value);
-  const days = moneyToNumber(document.getElementById("days").value) || 30;
-  const dailyEl = document.getElementById("dailyPrice");
-  if (dailyEl) dailyEl.value = Math.round(monthlyFee / days);
-}
-
-async function submitPaymentForm(e) {
-  e.preventDefault();
-
-  if (!state.apiUrl) {
-    showToast("មិនទាន់មាន API URL");
-    return;
-  }
-
-  const payload = getFormData();
-  if (!payload.studentName || !payload.teacherName || !payload.monthlyFee) {
-    showToast("សូមបំពេញព័ត៌មានចាំបាច់");
-    return;
-  }
-
-  els.submitBtn.disabled = true;
-  els.submitBtn.textContent = payload.recordId ? "កំពុងកែ..." : "កំពុងរក្សាទុក...";
-
-  try {
-    const data = await apiPost({
-      action: payload.recordId ? "updateRecord" : "addRecord",
-      payload
-    });
-
-    if (!data.success) throw new Error(data.message || "Save failed");
-
-    showToast(payload.recordId ? "បានកែទិន្នន័យរួចរាល់" : "បានបញ្ចូលទិន្នន័យរួចរាល់");
-    resetForm();
-    await bootstrapData();
-    switchView("records");
-  } catch (err) {
-    console.error(err);
-    showToast(err.message || "រក្សាទុកមិនបានជោគជ័យ");
-  } finally {
-    els.submitBtn.disabled = false;
-    els.submitBtn.textContent = "រក្សាទុក";
+  if (action === 'delete') {
+    deleteRecord(record);
   }
 }
 
-function getFormData() {
-  return {
-    recordId: (document.getElementById("recordId").value || "").trim(),
-    studentName: (document.getElementById("studentName").value || "").trim(),
-    gender: (document.getElementById("gender").value || "").trim(),
-    studentClass: (document.getElementById("studentClass").value || "").trim(),
-    teacherName: (document.getElementById("teacherName").value || "").trim(),
-    monthlyFee: moneyToNumber(document.getElementById("monthlyFee").value),
-    paid80: moneyToNumber(document.getElementById("paid80").value),
-    paid20: moneyToNumber(document.getElementById("paid20").value),
-    dailyPrice: moneyToNumber(document.getElementById("dailyPrice").value),
-    startDate: document.getElementById("startDate").value || "",
-    invoiceDate: document.getElementById("invoiceDate").value || "",
-    days: moneyToNumber(document.getElementById("days").value) || 30,
-    note: (document.getElementById("note")?.value || "").trim()
-  };
+function fillForm(record, readOnlyMode) {
+  state.editingId = readOnlyMode ? null : record.recordId;
+  els.recordId.value = record.recordId || '';
+  els.studentName.value = record.studentName || '';
+  els.gender.value = record.gender || 'ប្រុស';
+  els.studentClass.value = record.studentClass || '';
+  els.teacherName.value = record.teacherName || '';
+  els.monthlyFee.value = record.monthlyFee || 0;
+  els.paid80.value = record.paid80 || 0;
+  els.paid20.value = record.paid20 || 0;
+  els.dailyPrice.value = record.dailyPrice || 0;
+  els.startDate.value = normalizeDateInput(record.startDate);
+  els.invoiceDate.value = normalizeDateInput(record.invoiceDate);
+  els.days.value = record.days || 30;
+  els.note.value = record.note || '';
+  els.formTitle.textContent = readOnlyMode ? 'មើលព័ត៌មានកំណត់ត្រា' : 'កែប្រែកំណត់ត្រា';
+  els.cancelEditBtn.classList.toggle('hidden', readOnlyMode);
+
+  const disabled = readOnlyMode || state.session?.role !== 'admin';
+  els.recordForm.querySelectorAll('input, select, textarea').forEach((el) => {
+    if (el.id === 'recordId') return;
+    el.disabled = disabled;
+  });
+  document.getElementById('saveBtn').disabled = disabled;
 }
 
 function resetForm() {
-  els.paymentForm?.reset();
-
-  const recordIdEl = document.getElementById("recordId");
-  if (recordIdEl) recordIdEl.value = "";
-
-  const daysEl = document.getElementById("days");
-  if (daysEl) daysEl.value = 30;
-
-  const today = new Date().toISOString().slice(0, 10);
-  const invoiceDateEl = document.getElementById("invoiceDate");
-  const startDateEl = document.getElementById("startDate");
-  if (invoiceDateEl) invoiceDateEl.value = today;
-  if (startDateEl) startDateEl.value = today;
-
-  els.submitBtn.textContent = "រក្សាទុក";
+  state.editingId = null;
+  els.recordForm.reset();
+  els.recordId.value = '';
+  els.days.value = 30;
+  els.formTitle.textContent = 'បញ្ចូលការបង់ប្រាក់ថ្មី';
+  els.cancelEditBtn.classList.add('hidden');
+  applyRoleUi();
 }
 
-window.editRecord = function(recordId) {
-  const r = state.records.find(x => String(x.recordId) === String(recordId));
-  if (!r) return showToast("រកមិនឃើញ record");
+function cancelEdit() {
+  resetForm();
+}
 
-  document.getElementById("recordId").value = r.recordId || "";
-  document.getElementById("studentName").value = r.studentName || "";
-  document.getElementById("gender").value = r.gender || "";
-  document.getElementById("studentClass").value = r.studentClass || "";
-  document.getElementById("teacherName").value = r.teacherName || "";
-  document.getElementById("monthlyFee").value = r.monthlyFee || "";
-  document.getElementById("paid80").value = r.paid80 || "";
-  document.getElementById("paid20").value = r.paid20 || "";
+async function submitRecord(event) {
+  event.preventDefault();
+  if (state.session?.role !== 'admin') return;
 
-  const dailyPriceEl = document.getElementById("dailyPrice");
-  if (dailyPriceEl) dailyPriceEl.value = r.dailyPrice || "";
-
-  document.getElementById("startDate").value = normalizeDate(r.startDate) || "";
-  document.getElementById("invoiceDate").value = normalizeDate(r.invoiceDate) || "";
-  document.getElementById("days").value = r.days || 30;
-
-  const noteEl = document.getElementById("note");
-  if (noteEl) noteEl.value = r.note || "";
-
-  els.submitBtn.textContent = "កែទិន្នន័យ";
-  switchView("payments");
-  showToast("អ្នកអាចកែទិន្នន័យបានហើយ");
-};
-
-window.deleteRecord = async function(recordId) {
-  if (!confirm("តើអ្នកពិតជាចង់លុបកំណត់ត្រានេះមែនទេ?")) return;
+  const payload = {
+    recordId: els.recordId.value.trim(),
+    studentName: els.studentName.value.trim(),
+    gender: els.gender.value,
+    studentClass: els.studentClass.value.trim(),
+    teacherName: els.teacherName.value.trim(),
+    monthlyFee: Number(els.monthlyFee.value || 0),
+    paid80: Number(els.paid80.value || 0),
+    paid20: Number(els.paid20.value || 0),
+    dailyPrice: Number(els.dailyPrice.value || 0),
+    startDate: els.startDate.value,
+    invoiceDate: els.invoiceDate.value,
+    days: Number(els.days.value || 30),
+    note: els.note.value.trim()
+  };
 
   try {
-    const data = await apiPost({
-      action: "deleteRecord",
-      payload: { recordId }
-    });
-
-    if (!data.success) throw new Error(data.message || "Delete failed");
-
-    showToast("បានលុបទិន្នន័យរួចរាល់");
+    const action = payload.recordId ? 'updateRecord' : 'addRecord';
+    const res = await apiPost(action, payload);
+    if (!res.success) throw new Error(res.message || 'Save failed');
+    resetForm();
     await bootstrapData();
-  } catch (err) {
-    console.error(err);
-    showToast(err.message || "លុបទិន្នន័យមិនបាន");
-  }
-};
-
-async function apiGet(queryString) {
-  const separator = state.apiUrl.includes("?") ? "&" : "?";
-  const url = `${state.apiUrl}${separator}${queryString}&_ts=${Date.now()}`;
-
-  const res = await fetch(url, {
-    method: "GET",
-    cache: "no-store"
-  });
-
-  if (!res.ok) throw new Error("API GET error");
-  return res.json();
-}
-
-async function apiPost(body) {
-  const res = await fetch(state.apiUrl, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify(body)
-  });
-
-  if (!res.ok) throw new Error("API POST error");
-  return res.json();
-}
-
-function moneyToNumber(value) {
-  if (value === null || value === undefined || value === "") return 0;
-  if (typeof value === "number") return value;
-
-  const n = Number(
-    String(value)
-      .replace(/,/g, "")
-      .replace(/KHR/gi, "")
-      .replace(/៛/g, "")
-      .replace(/[^\d.-]/g, "")
-      .trim()
-  );
-
-  return Number.isFinite(n) ? n : 0;
-}
-
-function formatKHR(value) {
-  return `${moneyToNumber(value).toLocaleString()} KHR`;
-}
-
-function formatInt(value) {
-  return moneyToNumber(value).toLocaleString();
-}
-
-function normalizeDate(value) {
-  if (!value) return "";
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value).trim();
-  return d.toISOString().slice(0, 10);
-}
-
-function showToast(message) {
-  els.toast.textContent = message;
-  els.toast.classList.add("show");
-  clearTimeout(showToast._t);
-  showToast._t = setTimeout(() => {
-    els.toast.classList.remove("show");
-  }, 2600);
-}
-
-function escapeHtml(str) {
-  return String(str ?? "").replace(/[&<>"']/g, s => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
-  }[s]));
-}
-
-function escapeJs(str) {
-  return String(str ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-}
-
-function registerSW() {
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/sw.js").catch(console.error);
+    switchView('recordsView');
+    alert(res.message || 'រក្សាទុកបានជោគជ័យ');
+  } catch (error) {
+    alert(error.message);
   }
 }
 
+async function deleteRecord(record) {
+  const ok = window.confirm(`តើអ្នកចង់លុប ${record.studentName} មែនទេ?`);
+  if (!ok) return;
+
+  try {
+    const res = await apiPost('deleteRecord', { recordId: record.recordId });
+    if (!res.success) throw new Error(res.message || 'Delete failed');
+    await bootstrapData();
+    alert(res.message || 'លុបបានជោគជ័យ');
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+function renderTeacherReports() {
+  const map = new Map();
+  state.records.forEach((r) => {
+    const key = r.teacherName || 'មិនបានកំណត់';
+    if (!map.has(key)) map.set(key, { count: 0, total80: 0, total20: 0, totalFee: 0 });
+    const item = map.get(key);
+    item.count += 1;
+    item.total80 += Number(r.paid80 || 0);
+    item.total20 += Number(r.paid20 || 0);
+    item.totalFee += Number(r.monthlyFee || 0);
+  });
+
+  const entries = Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count);
+  els.teacherCards.innerHTML = entries.length
+    ? entries
+        .map(
+          ([name, data]) => `
+      <div class="teacher-card">
+        <strong>${escapeHtml(name)}</strong>
+        <div class="muted-row">ចំនួនសិស្ស: ${formatNumber(data.count)}</div>
+        <div class="amounts">
+          <div><span class="muted-row">សរុបតម្លៃ</span><br>${formatNumber(data.totalFee)} KHR</div>
+          <div><span class="muted-row">ប្រាក់គ្រូ 80%</span><br>${formatNumber(data.total80)} KHR</div>
+          <div><span class="muted-row">ប្រាក់សាលា 20%</span><br>${formatNumber(data.total20)} KHR</div>
+        </div>
+      </div>`
+        )
+        .join('')
+    : '<div class="teacher-card">មិនមានទិន្នន័យ</div>';
+}
+
+function renderSummaryReports() {
+  renderGroupedSummary('classSummary', groupRecordsBy((r) => r.studentClass || 'មិនបានកំណត់'));
+  renderGroupedSummary('genderSummary', groupRecordsBy((r) => r.gender || 'មិនបានកំណត់'));
+}
+
+function renderGroupedSummary(targetId, items) {
+  const container = els[targetId];
+  container.innerHTML = items.length
+    ? items
+        .map(
+          (item) => `
+      <div class="summary-item">
+        <div class="label">${escapeHtml(item.name)}</div>
+        <strong>${formatNumber(item.count)} នាក់</strong>
+        <div class="muted-row">សរុប: ${formatNumber(item.total)} KHR</div>
+      </div>`
+        )
+        .join('')
+    : '<div class="summary-item">មិនមានទិន្នន័យ</div>';
+}
+
+function groupRecordsBy(getKey) {
+  const map = new Map();
+  state.records.forEach((r) => {
+    const key = getKey(r);
+    if (!map.has(key)) map.set(key, { name: key, count: 0, total: 0 });
+    const item = map.get(key);
+    item.count += 1;
+    item.total += Number(r.monthlyFee || 0);
+  });
+  return Array.from(map.values()).sort((a, b) => b.count - a.count);
+}
+
+function drawChart() {
+  const canvas = els.chartCanvas;
+  const ctx = canvas.getContext('2d');
+  const type = els.chartTypeSelect.value;
+  const grouped =
+    type === 'teacher'
+      ? groupRecordsBy((r) => r.teacherName || 'N/A')
+      : type === 'class'
+      ? groupRecordsBy((r) => r.studentClass || 'N/A')
+      : groupRecordsBy((r) => r.gender || 'N/A');
+
+  const data = grouped.slice(0, 6);
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = 280 * dpr;
+  ctx.scale(dpr, dpr);
+
+  ctx.clearRect(0, 0, rect.width, 280);
+  ctx.fillStyle = '#08111f';
+  roundRect(ctx, 0, 0, rect.width, 280, 18, true);
+
+  if (!data.length) {
+    ctx.fillStyle = '#a8b9de';
+    ctx.font = '16px Arial';
+    ctx.fillText('មិនមានទិន្នន័យសម្រាប់បង្ហាញ', 24, 36);
+    return;
+  }
+
+  const max = Math.max(...data.map((i) => i.total || i.count), 1);
+  const padding = { top: 24, right: 20, bottom: 58, left: 20 };
+  const chartWidth = rect.width - padding.left - padding.right;
+  const chartHeight = 280 - padding.top - padding.bottom;
+  const barWidth = chartWidth / data.length - 14;
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.beginPath();
+  for (let i = 0; i < 4; i++) {
+    const y = padding.top + (chartHeight / 3) * i;
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(rect.width - padding.right, y);
+  }
+  ctx.stroke();
+
+  data.forEach((item, index) => {
+    const value = item.total || item.count;
+    const x = padding.left + index * (barWidth + 14);
+    const barHeight = (value / max) * chartHeight;
+    const y = padding.top + chartHeight - barHeight;
+
+    const gradient = ctx.createLinearGradient(0, y, 0, y + barHeight);
+    gradient.addColorStop(0, '#60a5fa');
+    gradient.addColorStop(1, '#1d4ed8');
+    ctx.fillStyle = gradient;
+    roundRect(ctx, x, y, barWidth, barHeight, 12, true);
+
+    ctx.fillStyle = '#dce9ff';
+    ctx.font = '12px Arial';
+    ctx.fillText(formatShort(value), x, y - 8);
+
+    ctx.fillStyle = '#9db4e8';
+    const label = item.name.length > 10 ? `${item.name.slice(0, 10)}…` : item.name;
+    ctx.fillText(label, x, 248);
+  });
+}
+
+function roundRect(ctx, x, y, width, height, radius, fill) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + width, y, r);
+  ctx.closePath();
+  if (fill) ctx.fill();
+}
+
+function switchView(viewId) {
+  state.currentView = viewId;
+  els.views.forEach((view) => view.classList.toggle('hidden', view.id !== viewId));
+  els.navBtns.forEach((btn) => btn.classList.toggle('active', btn.dataset.view === viewId));
+  const activeBtn = els.navBtns.find((btn) => btn.dataset.view === viewId);
+  els.pageTitle.textContent = activeBtn ? activeBtn.textContent : 'Dashboard';
+}
+
+function autoCalculateShares() {
+  const fee = Number(els.monthlyFee.value || 0);
+  els.paid80.value = Math.round(fee * 0.8);
+  els.paid20.value = Math.round(fee * 0.2);
+}
+
+function exportCsv() {
+  const rows = [
+    ['ឈ្មោះសិស្ស', 'ភេទ', 'ថ្នាក់', 'ឈ្មោះគ្រូ', 'តម្លៃសិក្សា', 'ប្រាក់គ្រូ 80%', 'ប្រាក់សាលា 20%', 'ថ្ងៃចាប់ផ្តើម', 'ថ្ងៃបង់ប្រាក់', 'ចំនួនថ្ងៃ', 'Note'],
+    ...state.filteredRecords.map((r) => [
+      r.studentName,
+      r.gender,
+      r.studentClass,
+      r.teacherName,
+      r.monthlyFee,
+      r.paid80,
+      r.paid20,
+      r.startDate,
+      r.invoiceDate,
+      r.days,
+      r.note || ''
+    ])
+  ];
+
+  const csv = rows.map((row) => row.map(csvEscape).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'school-pay-records.csv';
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function csvEscape(value) {
+  const str = String(value ?? '');
+  return `"${str.replace(/"/g, '""')}"`;
+}
+
+function setupInstallPrompt() {
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    state.deferredPrompt = event;
+    els.installBtn.classList.remove('hidden');
+  });
+}
+
+async function installApp() {
+  if (!state.deferredPrompt) return;
+  state.deferredPrompt.prompt();
+  await state.deferredPrompt.userChoice;
+  state.deferredPrompt = null;
+  els.installBtn.classList.add('hidden');
+}
+
+function registerServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(console.error);
+  }
+}
+
+function normalizeDateInput(value) {
+  if (!value) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function formatNumber(value) {
+  return Number(value || 0).toLocaleString();
+}
+
+function formatShort(value) {
+  const num = Number(value || 0);
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+  return `${num}`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
