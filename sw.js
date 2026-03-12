@@ -1,4 +1,4 @@
-const CACHE_NAME = 'school-pay-v2-pwa';
+const CACHE_NAME = 'school-pay-v4-cache';
 const APP_SHELL = [
   './',
   './index.html',
@@ -17,39 +17,29 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.map((key) => (key !== CACHE_NAME ? caches.delete(key) : Promise.resolve())))
-    )
+    caches.keys().then((keys) => Promise.all(keys.map((key) => key !== CACHE_NAME ? caches.delete(key) : Promise.resolve())))
   );
   self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
-  const req = event.request;
-  const url = new URL(req.url);
+  const request = event.request;
+  const url = new URL(request.url);
 
-  if (req.method !== 'GET') return;
+  if (request.method !== 'GET') return;
 
   if (API_HOSTS.includes(url.hostname)) {
-    event.respondWith(
-      fetch(req, { cache: 'no-store' }).catch(
-        () =>
-          new Response(JSON.stringify({ success: false, message: 'Offline or API unavailable' }), {
-            status: 503,
-            headers: { 'Content-Type': 'application/json' }
-          })
-      )
-    );
+    event.respondWith(fetch(request, { cache: 'no-store' }));
     return;
   }
 
-  if (req.mode === 'navigate') {
+  if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(req)
-        .then((res) => {
-          const clone = res.clone();
+      fetch(request)
+        .then((response) => {
+          const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put('./index.html', clone));
-          return res;
+          return response;
         })
         .catch(() => caches.match('./index.html'))
     );
@@ -57,13 +47,14 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(
-    caches.match(req).then((cached) => {
+    caches.match(request).then((cached) => {
       if (cached) return cached;
-      return fetch(req).then((res) => {
-        if (!res || res.status !== 200) return res;
-        const clone = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
-        return res;
+      return fetch(request).then((response) => {
+        if (response && response.status === 200 && response.type !== 'opaque') {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        }
+        return response;
       });
     })
   );
