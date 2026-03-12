@@ -235,11 +235,29 @@ function fillTeacherSelects() {
 }
 
 function renderDashboard() {
-  els.teacherCount.textContent = formatInt(state.summary.teacherCount);
-  els.recordCount.textContent = formatInt(state.summary.recordCount);
-  els.total80.textContent = formatKHR(state.summary.total80);
-  els.total20.textContent = formatKHR(state.summary.total20);
+  // ដំណោះស្រាយ: គណនាផលបូក 80% និង 20% ដោយផ្ទាល់នៅលើ Web App 
+  // ជៀសវាងការ error ពី API ដោយសារតែមានជាប់សញ្ញា ៛ និង KHR នៅក្នុង Sheet
+  let calculatedTotal80 = 0;
+  let calculatedTotal20 = 0;
 
+  if (state.records && state.records.length > 0) {
+    state.records.forEach(r => {
+      calculatedTotal80 += moneyToNumber(r.paid80);
+      calculatedTotal20 += moneyToNumber(r.paid20);
+    });
+  } else {
+    // ករណីគ្មាន record ទាញយកសរុបពី backend
+    calculatedTotal80 = moneyToNumber(state.summary.total80);
+    calculatedTotal20 = moneyToNumber(state.summary.total20);
+  }
+
+  // បង្ហាញទិន្នន័យលើ Dashboard
+  els.teacherCount.textContent = formatInt(state.summary.teacherCount);
+  els.recordCount.textContent = formatInt(state.records.length || state.summary.recordCount);
+  els.total80.textContent = formatKHR(calculatedTotal80);
+  els.total20.textContent = formatKHR(calculatedTotal20);
+
+  // បង្ហាញបញ្ជីគ្រូ
   els.teacherList.innerHTML = state.teachers.length
     ? state.teachers.map(t => `
       <div class="teacher-item">
@@ -252,6 +270,7 @@ function renderDashboard() {
     `).join("")
     : `<div class="teacher-item">មិនទាន់មាន Teacher Sheets</div>`;
 
+  // បង្ហាញកំណត់ត្រាចុងក្រោយ
   els.recentRecords.innerHTML = state.recent.length
     ? state.recent.map(r => `
       <div class="recent-item">
@@ -263,7 +282,6 @@ function renderDashboard() {
     `).join("")
     : `<div class="recent-item">មិនទាន់មានកំណត់ត្រា</div>`;
 }
-
 function renderRecordsTable() {
   const teacher = (els.filterTeacher?.value || "").trim();
   const search = (els.searchInput?.value || "").trim().toLowerCase();
