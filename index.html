@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>School Pay V2</title>
+  <title>School Pay V4</title>
   <meta name="theme-color" content="#2563eb" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="SchoolPay" />
+  <meta name="apple-mobile-web-app-title" content="School Pay" />
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" href="./logo.png" />
   <link rel="apple-touch-icon" href="./logo.png" />
@@ -23,13 +23,13 @@
         <img src="./logo.png" alt="School Pay" class="brand-logo" />
         <div>
           <h1>School Pay</h1>
-          <p>PWA Dashboard Version 2</p>
+          <p>PWA Dashboard Version 4</p>
         </div>
       </div>
 
       <div class="demo-box">
         <div>Admin: <b>admin</b> / <b>admin123</b></div>
-        <div>Viewer: <b>user</b> / <b>user123</b></div>
+        <div>User: <b>user</b> / <b>user123</b></div>
       </div>
 
       <form id="loginForm" class="form-grid one-col">
@@ -59,7 +59,7 @@
 
       <nav class="side-nav">
         <button class="nav-btn active" data-view="dashboardView">Dashboard</button>
-        <button class="nav-btn" data-view="formView">បញ្ចូលការបង់ប្រាក់</button>
+        <button class="nav-btn admin-only" data-view="formView">បញ្ចូលការបង់ប្រាក់</button>
         <button class="nav-btn" data-view="recordsView">ទិន្នន័យ</button>
         <button class="nav-btn" data-view="teachersView">របាយការណ៍គ្រូ</button>
         <button class="nav-btn" data-view="reportsView">របាយការណ៍សង្ខេប</button>
@@ -91,10 +91,10 @@
           <div>
             <div class="eyebrow">សូមស្វាគមន៍</div>
             <h2>ប្រព័ន្ធគ្រប់គ្រងការបង់ប្រាក់សិស្ស</h2>
-            <p>បញ្ចូល កែប្រែ ស្វែងរក និងតាមដានស្ថានភាពបង់ប្រាក់សិស្សបានពី WebApp និង PWA។</p>
+            <p>Version 4 មាន login backend, role permission, report, export និងកែបញ្ហា edit record ខុសសិស្សដោយប្រើ Record ID ជាចម្បង។</p>
           </div>
           <div class="hero-actions">
-            <button id="gotoFormBtn" class="primary-btn">បញ្ចូលថ្មី</button>
+            <button id="gotoFormBtn" class="primary-btn admin-only">បញ្ចូលថ្មី</button>
             <button id="gotoRecordsBtn" class="ghost-btn">ទិន្នន័យ</button>
           </div>
         </div>
@@ -148,10 +148,10 @@
           <div class="panel-head">
             <div>
               <h3 id="formTitle">បញ្ចូលការបង់ប្រាក់ថ្មី</h3>
-              <p id="formSubtitle">Admin អាចបន្ថែម និងកែប្រែទិន្នន័យបាន។</p>
+              <p id="formSubtitle">Admin អាចបន្ថែម កែប្រែ និងលុបទិន្នន័យបាន។</p>
             </div>
             <div class="inline-controls">
-              <button id="resetFormBtn" class="ghost-btn">សម្អាត Form</button>
+              <button id="resetFormBtn" type="button" class="ghost-btn">សម្អាត Form</button>
             </div>
           </div>
 
@@ -224,7 +224,7 @@
           <div class="panel-head wrap">
             <div>
               <h3>ទិន្នន័យទាំងអស់</h3>
-              <p>ស្វែងរក តម្រង និងកែប្រែបានពីទីនេះ។</p>
+              <p>កែបញ្ហា edit ខុសសិស្សរួចហើយ។ ប៊ូតុង View/Edit/Delete ចាប់យកតាម Record ID មិនមែនតាម index ឬឈ្មោះឡើយ។</p>
             </div>
             <div class="inline-controls wrap">
               <input id="searchInput" placeholder="ស្វែងរកឈ្មោះសិស្ស / គ្រូ / ថ្នាក់" />
@@ -249,6 +249,7 @@
                   <th>ថ្ងៃបង់</th>
                   <th>ថ្ងៃ</th>
                   <th>Note</th>
+                  <th>Record ID</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -263,40 +264,42 @@
           <div class="panel-head">
             <h3>របាយការណ៍គ្រូ</h3>
           </div>
-          <div id="teacherCards" class="teacher-cards"></div>
+          <div id="teacherCards" class="teacher-grid"></div>
         </div>
       </section>
 
       <section id="reportsView" class="view-section hidden">
-        <div class="grid-2">
+        <div class="grid-2 reports-grid">
           <div class="panel glass">
-            <h3>របាយការណ៍តាមថ្នាក់</h3>
+            <div class="panel-head">
+              <h3>សង្ខេបតាមថ្នាក់</h3>
+            </div>
             <div id="classSummary" class="summary-list"></div>
           </div>
           <div class="panel glass">
-            <h3>របាយការណ៍តាមភេទ</h3>
+            <div class="panel-head">
+              <h3>សង្ខេបតាមភេទ</h3>
+            </div>
             <div id="genderSummary" class="summary-list"></div>
           </div>
         </div>
       </section>
 
       <section id="settingsView" class="view-section hidden">
-        <div class="panel glass">
-          <h3>ការកំណត់</h3>
-          <div class="settings-grid">
+        <div class="panel glass settings-panel">
+          <div class="panel-head">
+            <h3>ការកំណត់</h3>
+          </div>
+          <div class="form-grid one-col settings-box">
             <div>
               <label>Google Apps Script Web App URL</label>
               <input id="apiUrlInput" placeholder="Paste your deployed Web App URL" />
-              <p class="muted">URL នេះនឹងរក្សាទុកក្នុង browser របស់អ្នក។</p>
             </div>
-            <div class="settings-actions">
-              <button id="saveSettingsBtn" class="primary-btn">រក្សាទុក URL</button>
-              <button id="clearSettingsBtn" class="ghost-btn">លុប URL</button>
+            <div class="inline-controls wrap">
+              <button id="saveSettingsBtn" class="primary-btn" type="button">រក្សាទុក URL</button>
+              <button id="clearSettingsBtn" class="ghost-btn" type="button">លុប URL</button>
             </div>
-          </div>
-          <div class="demo-box small">
-            <strong>សុវត្ថិភាព:</strong> Role login នៅ version នេះគឺនៅ frontend សម្រាប់ការប្រើប្រាស់លឿន។
-            បើចង់ឱ្យមានសុវត្ថិភាពពេញលេញ ត្រូវបន្ថែមការផ្ទៀងផ្ទាត់សិទ្ធិនៅ Google Apps Script backend ផងដែរ។
+            <p class="muted-note">Deploy Apps Script ជា Web App, Execute as: Me, Who has access: Anyone. បន្ទាប់មក paste URL ទៅទីនេះ។</p>
           </div>
         </div>
       </section>
