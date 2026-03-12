@@ -32,7 +32,7 @@ function initApp() {
 
 function bindElements() {
   const ids = [
-    'appLoader','loginView','appView','loginForm','loginUsername','loginPassword','loginError','userRoleBadge','currentUserText',
+    'appLoader','loginView','appView','loginForm','loginApiUrl','testApiBtn','loginUsername','loginPassword','loginError','userRoleBadge','currentUserText',
     'logoutBtn','refreshBtn','installBtn','pageTitle','statusText','apiBadge','gotoFormBtn','gotoRecordsBtn','teacherCount',
     'recordCount','total80','total20','recentList','chartCanvas','chartTypeSelect','refreshChartBtn','recordForm','recordId',
     'formTitle','formSubtitle','resetFormBtn','studentName','gender','studentClass','teacherName','teacherOptions','monthlyFee',
@@ -48,6 +48,7 @@ function bindElements() {
 
 function bindEvents() {
   els.loginForm.addEventListener('submit', handleLogin);
+  els.testApiBtn.addEventListener('click', testApiConnection);
   els.logoutBtn.addEventListener('click', logout);
   els.refreshBtn.addEventListener('click', bootstrapData);
   els.gotoFormBtn.addEventListener('click', () => switchView('formView'));
@@ -69,6 +70,7 @@ function bindEvents() {
 
 function initSettings() {
   els.apiUrlInput.value = state.apiUrl;
+  if (els.loginApiUrl) els.loginApiUrl.value = state.apiUrl;
 }
 
 function loadSession() {
@@ -88,6 +90,28 @@ function clearSession() {
   localStorage.removeItem(CONFIG.storageKeys.session);
 }
 
+
+async function testApiConnection() {
+  const apiUrl = (els.loginApiUrl.value || '').trim();
+  if (!apiUrl) {
+    els.loginError.textContent = 'សូមបញ្ចូល Web App URL ជាមុនសិន';
+    return;
+  }
+
+  try {
+    const separator = apiUrl.includes('?') ? '&' : '?';
+    const res = await fetch(`${apiUrl}${separator}action=ping&_ts=${Date.now()}`, { cache: 'no-store' });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || 'API Error');
+    els.loginError.textContent = 'API Connected';
+    state.apiUrl = apiUrl;
+    localStorage.setItem(CONFIG.storageKeys.apiUrl, apiUrl);
+    els.apiUrlInput.value = apiUrl;
+  } catch (error) {
+    els.loginError.textContent = `API Error: ${error.message}`;
+  }
+}
+
 function renderAuth() {
   els.appLoader.classList.add('hidden');
   if (!state.session) {
@@ -101,14 +125,22 @@ function renderAuth() {
   els.userRoleBadge.textContent = state.session.role;
   els.currentUserText.textContent = state.session.name;
   els.apiUrlInput.value = state.apiUrl;
+  if (els.loginApiUrl) els.loginApiUrl.value = state.apiUrl;
   applyRoleUi();
   bootstrapData();
 }
 
 async function handleLogin(event) {
   event.preventDefault();
+  const apiUrl = els.loginApiUrl.value.trim();
   const username = els.loginUsername.value.trim();
   const password = els.loginPassword.value.trim();
+
+  if (apiUrl) {
+    state.apiUrl = apiUrl;
+    localStorage.setItem(CONFIG.storageKeys.apiUrl, apiUrl);
+    els.apiUrlInput.value = apiUrl;
+  }
 
   if (!state.apiUrl) {
     els.loginError.textContent = 'សូមកំណត់ Google Apps Script Web App URL មុនសិន។';
