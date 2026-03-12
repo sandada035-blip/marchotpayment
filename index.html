@@ -2,200 +2,214 @@
 <html lang="km">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>School Pay Version 4</title>
-  <meta name="theme-color" content="#2563eb" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="School Pay" />
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" href="./logo.png" />
-  <link rel="apple-touch-icon" href="./logo.png" />
   <link rel="stylesheet" href="./style.css" />
+  <meta name="theme-color" content="#2563eb" />
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand">
-        <img src="./logo.png" alt="logo" class="logo" />
+        <img src="./logo.png" alt="logo" class="brand-logo" />
         <div>
           <h1>School Pay</h1>
           <p>PWA Dashboard</p>
         </div>
       </div>
 
-      <nav class="menu">
-        <button class="menu-btn active" data-view="dashboard">Dashboard</button>
-        <button class="menu-btn" data-view="students">បញ្ជីសិស្ស</button>
-        <button class="menu-btn" data-view="reports">របាយការណ៍</button>
-        <button class="menu-btn" data-view="settings">Settings</button>
+      <nav class="nav">
+        <button class="nav-btn active" data-view="dashboardView">Dashboard</button>
+        <button class="nav-btn" data-view="formView">បញ្ចូលសិស្ស</button>
+        <button class="nav-btn" data-view="tableView">តារាងកែតម្រូវ</button>
+        <button class="nav-btn" data-view="settingsView">Settings</button>
       </nav>
 
-      <div class="session-box">
-        <div>Role: <span id="roleText">-</span></div>
-        <div>User: <span id="userText">-</span></div>
-        <button id="logoutBtn" class="ghost danger">Logout</button>
+      <div class="sidebar-footer">
+        <p>Role: <span id="roleText">-</span></p>
+        <p>User: <span id="userText">-</span></p>
+        <button id="logoutBtn" class="danger-btn full-btn">Logout</button>
       </div>
     </aside>
 
-    <main class="main">
+    <main class="main-content">
       <header class="topbar">
-        <div>
-          <h2 id="pageTitle">Dashboard</h2>
-          <p id="errorText" class="muted">ស្ថានភាពប្រព័ន្ធ</p>
-        </div>
-        <div class="top-actions">
-          <span id="apiStatus" class="status-pill">API: Not set</span>
+        <h2 id="pageTitle">Dashboard</h2>
+        <div class="topbar-actions">
+          <span id="apiStatus" class="status-pill">API: Loading...</span>
           <button id="refreshBtn">Refresh</button>
         </div>
       </header>
 
-      <section id="loginSection" class="panel auth-panel">
-        <div class="panel-header">
+      <p id="errorText" class="error-text"></p>
+
+      <section id="loginPanel" class="panel">
+        <div class="card">
           <h3>Login</h3>
-          <p>ប្រើទំព័រតែមួយ ដើម្បីជៀសវាង 404 នៅលើ Vercel</p>
-        </div>
-        <div class="grid-2">
-          <label>
-            <span>Google Apps Script Web App URL</span>
-            <input id="apiUrlInput" type="url" placeholder="Paste /exec URL here" />
-          </label>
-          <div class="btn-row end">
-            <button id="saveApiUrlBtn" class="ghost">រក្សាទុក URL</button>
-            <button id="testApiBtn" class="ghost">Test API</button>
+          <p>សូមភ្ជាប់ Google Apps Script Web App មុនសិន</p>
+
+          <label for="apiUrl">Google Apps Script Web App URL</label>
+          <div class="inline-row">
+            <input
+              id="apiUrl"
+              type="text"
+              placeholder="Paste /exec URL here"
+            />
+            <button id="saveApiBtn" type="button">រក្សាទុក URL</button>
+            <button id="testApiBtn" type="button">Test API</button>
           </div>
-          <label>
-            <span>Username</span>
-            <input id="username" type="text" placeholder="admin or user" />
-          </label>
-          <label>
-            <span>Password</span>
-            <input id="password" type="password" placeholder="password" />
-          </label>
-        </div>
-        <div class="btn-row">
-          <button id="loginBtn">Login</button>
-        </div>
-        <div class="hint-box">
-          <div><strong>Admin</strong>: admin / admin123</div>
-          <div><strong>User</strong>: user / user123</div>
+
+          <div class="two-col">
+            <div>
+              <label for="username">Username</label>
+              <input id="username" type="text" placeholder="admin" />
+            </div>
+            <div>
+              <label for="password">Password</label>
+              <input id="password" type="password" placeholder="admin123" />
+            </div>
+          </div>
+
+          <button id="loginBtn" class="primary-btn">Login</button>
+
+          <div class="hint-box">
+            <p><strong>Admin:</strong> admin / admin123</p>
+            <p><strong>User:</strong> user / user123</p>
+          </div>
         </div>
       </section>
 
-      <section id="appSection" class="hidden">
-        <section id="dashboardView" class="view active-view">
-          <div class="hero panel">
-            <div>
-              <p class="eyebrow">សូមស្វាគមន៍</p>
-              <h3>ប្រព័ន្ធគ្រប់គ្រងការបង់ប្រាក់សិស្ស</h3>
-              <p>Version 4 បានកែឱ្យប្រើ Single Page PWA ដើម្បីកុំឱ្យមាន 404 នៅលើ Vercel និងប្រើ Record ID សម្រាប់ Edit/Delete។</p>
-            </div>
-            <div class="btn-row">
-              <button data-view-target="students">បញ្ជីសិស្ស</button>
-              <button data-view-target="reports" class="ghost">របាយការណ៍</button>
-            </div>
+      <section id="appPanel" class="hidden">
+        <section id="dashboardView" class="view-section">
+          <div class="hero card">
+            <h3>សូមស្វាគមន៍</h3>
+            <h2>ប្រព័ន្ធគ្រប់គ្រងការបង់ប្រាក់សិស្ស</h2>
+            <p>Version 4 ប្រើ login backend និងកែ edit record ឱ្យចាប់តាម Record ID</p>
           </div>
 
           <div class="stats-grid">
-            <div class="stat-card panel">
-              <span>ចំនួនសិស្ស</span>
-              <strong id="studentCount">0</strong>
+            <div class="card stat-card">
+              <h4>ចំនួនសិស្ស</h4>
+              <p id="studentCount">0</p>
             </div>
-            <div class="stat-card panel">
-              <span>ចំនួនគ្រូបង្រៀន</span>
-              <strong id="teacherCount">0</strong>
+            <div class="card stat-card">
+              <h4>ចំនួនគ្រូ</h4>
+              <p id="teacherCount">0</p>
             </div>
-            <div class="stat-card panel">
-              <span>សរុបប្រាក់គ្រូ 80%</span>
-              <strong id="total80">0 KHR</strong>
+            <div class="card stat-card">
+              <h4>ប្រាក់គ្រូ 80%</h4>
+              <p id="total80">0 KHR</p>
             </div>
-            <div class="stat-card panel">
-              <span>សរុបប្រាក់សាលា 20%</span>
-              <strong id="total20">0 KHR</strong>
-            </div>
-          </div>
-        </section>
-
-        <section id="studentsView" class="view hidden">
-          <div class="split-grid">
-            <div class="panel">
-              <div class="panel-header">
-                <h3 id="formTitle">បញ្ចូលទិន្នន័យ</h3>
-                <p>Admin អាច Add / Edit / Delete បាន។ User មើលបានតែប៉ុណ្ណោះ។</p>
-              </div>
-              <div class="form-grid">
-                <label><span>ឈ្មោះសិស្ស</span><input id="studentName" type="text" /></label>
-                <label><span>ភេទ</span><input id="gender" type="text" /></label>
-                <label><span>ថ្នាក់</span><input id="studentClass" type="text" /></label>
-                <label><span>ឈ្មោះគ្រូ</span><input id="teacherName" type="text" /></label>
-                <label><span>តម្លៃសិក្សា</span><input id="monthlyFee" type="number" min="0" /></label>
-                <label><span>ប្រាក់គ្រូ 80%</span><input id="paid80" type="number" min="0" /></label>
-                <label><span>ប្រាក់សាលា 20%</span><input id="paid20" type="number" min="0" /></label>
-                <label><span>តម្លៃក្នុងមួយថ្ងៃ</span><input id="dailyPrice" type="number" min="0" /></label>
-                <label><span>ថ្ងៃចាប់ផ្តើម</span><input id="startDate" type="date" /></label>
-                <label><span>ថ្ងៃបង់ប្រាក់</span><input id="invoiceDate" type="date" /></label>
-                <label><span>ចំនួនថ្ងៃ</span><input id="days" type="number" min="1" value="30" /></label>
-                <label class="full"><span>កំណត់ចំណាំ</span><textarea id="note" rows="3"></textarea></label>
-              </div>
-              <div class="btn-row">
-                <button id="saveBtn">Save</button>
-                <button id="clearBtn" class="ghost">Clear</button>
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="toolbar">
-                <input id="searchInput" type="search" placeholder="ស្វែងរកឈ្មោះសិស្ស / ថ្នាក់ / គ្រូ / Record ID" />
-                <select id="teacherFilter">
-                  <option value="">គ្រប់គ្រូ</option>
-                </select>
-              </div>
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Record ID</th>
-                      <th>ឈ្មោះសិស្ស</th>
-                      <th>ភេទ</th>
-                      <th>ថ្នាក់</th>
-                      <th>គ្រូ</th>
-                      <th>តម្លៃ</th>
-                      <th>ថ្ងៃបង់</th>
-                      <th>ចំណាំ</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody id="recordsTableBody"></tbody>
-                </table>
-              </div>
+            <div class="card stat-card">
+              <h4>ប្រាក់សាលា 20%</h4>
+              <p id="total20">0 KHR</p>
             </div>
           </div>
         </section>
 
-        <section id="reportsView" class="view hidden">
-          <div class="panel">
-            <div class="panel-header">
-              <h3>របាយការណ៍គ្រូ</h3>
-              <p>ទិន្នន័យសង្ខេបតាមចំនួនសិស្សក្នុងសន្លឹកគ្រូនីមួយៗ</p>
+        <section id="formView" class="view-section hidden">
+          <div class="card">
+            <h3 id="formTitle">បញ្ចូលទិន្នន័យ</h3>
+
+            <div class="form-grid">
+              <div>
+                <label>ឈ្មោះសិស្ស</label>
+                <input id="studentName" type="text" />
+              </div>
+              <div>
+                <label>ភេទ</label>
+                <input id="gender" type="text" />
+              </div>
+              <div>
+                <label>ថ្នាក់</label>
+                <input id="studentClass" type="text" />
+              </div>
+              <div>
+                <label>ឈ្មោះគ្រូ</label>
+                <input id="teacherName" type="text" />
+              </div>
+              <div>
+                <label>តម្លៃសិក្សា</label>
+                <input id="monthlyFee" type="number" />
+              </div>
+              <div>
+                <label>ប្រាក់គ្រូ 80%</label>
+                <input id="paid80" type="number" />
+              </div>
+              <div>
+                <label>ប្រាក់សាលា 20%</label>
+                <input id="paid20" type="number" />
+              </div>
+              <div>
+                <label>តម្លៃក្នុងមួយថ្ងៃ</label>
+                <input id="dailyPrice" type="number" />
+              </div>
+              <div>
+                <label>ថ្ងៃចាប់ផ្តើម</label>
+                <input id="startDate" type="date" />
+              </div>
+              <div>
+                <label>ថ្ងៃបង់ប្រាក់</label>
+                <input id="invoiceDate" type="date" />
+              </div>
+              <div>
+                <label>ចំនួនថ្ងៃក្នុង១ខែ</label>
+                <input id="days" type="number" value="30" />
+              </div>
+              <div>
+                <label>Note</label>
+                <input id="note" type="text" />
+              </div>
             </div>
-            <div id="teacherReport" class="report-grid"></div>
+
+            <div class="inline-row top-gap">
+              <button id="saveBtn" class="primary-btn">រក្សាទុក</button>
+              <button id="clearBtn" type="button">សម្អាត</button>
+            </div>
           </div>
         </section>
 
-        <section id="settingsView" class="view hidden">
-          <div class="panel">
-            <div class="panel-header">
-              <h3>Settings</h3>
-              <p>កែ API URL នៅទីនេះបាន។ គ្មាន redirect ទៅ page ផ្សេងទៀតទេ។</p>
+        <section id="tableView" class="view-section hidden">
+          <div class="card">
+            <div class="inline-row wrap-row">
+              <input id="searchInput" type="text" placeholder="ស្វែងរកឈ្មោះ/ថ្នាក់/គ្រូ/Record ID" />
+              <select id="teacherFilter">
+                <option value="">គ្រប់គ្រូ</option>
+              </select>
             </div>
-            <label>
-              <span>Current API URL</span>
-              <input id="apiUrlInputSettings" type="url" />
-            </label>
-            <div class="btn-row">
-              <button id="saveApiUrlSettingsBtn">រក្សាទុក URL</button>
-              <button id="testApiSettingsBtn" class="ghost">Test API</button>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Record ID</th>
+                    <th>ឈ្មោះសិស្ស</th>
+                    <th>ភេទ</th>
+                    <th>ថ្នាក់</th>
+                    <th>គ្រូ</th>
+                    <th>តម្លៃ</th>
+                    <th>ថ្ងៃបង់</th>
+                    <th>Note</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="recordsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="settingsView" class="view-section hidden">
+          <div class="card">
+            <h3>Settings</h3>
+            <label for="apiUrlSettings">Google Apps Script Web App URL</label>
+            <div class="inline-row">
+              <input id="apiUrlSettings" type="text" placeholder="Paste /exec URL here" />
+              <button id="saveApiBtn2" type="button">រក្សាទុក URL</button>
+              <button id="testApiBtn2" type="button">Test API</button>
             </div>
           </div>
         </section>
