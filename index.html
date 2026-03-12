@@ -1,308 +1,323 @@
-<!DOCTYPE html>
-<html lang="km">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>School Pay V2</title>
-  <meta name="theme-color" content="#2563eb" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="SchoolPay" />
-  <link rel="manifest" href="./manifest.json" />
-  <link rel="icon" href="./logo.png" />
-  <link rel="apple-touch-icon" href="./logo.png" />
-  <link rel="stylesheet" href="./style.css" />
-</head>
-<body>
-  <div id="appLoader" class="app-loader">Loading...</div>
+:root {
+  --bg: #071122;
+  --bg-soft: #0f1a31;
+  --panel: rgba(27, 43, 78, 0.85);
+  --line: rgba(120, 145, 205, 0.22);
+  --text: #ecf2ff;
+  --muted: #a8b9de;
+  --primary: #3b82f6;
+  --primary-2: #2563eb;
+  --danger: #ef4444;
+  --success: #10b981;
+  --shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+  --radius: 22px;
+}
 
-  <section id="loginView" class="login-view hidden">
-    <div class="login-card glass">
-      <div class="brand-row">
-        <img src="./logo.png" alt="School Pay" class="brand-logo" />
-        <div>
-          <h1>School Pay</h1>
-          <p>PWA Dashboard Version 2</p>
-        </div>
-      </div>
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; min-height: 100%; }
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: radial-gradient(circle at top, #102a56 0%, var(--bg) 44%, #050b17 100%);
+  color: var(--text);
+}
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+img { display: block; }
+.hidden { display: none !important; }
+.full-width { grid-column: 1 / -1; }
+.full-btn { width: 100%; }
+.wrap { flex-wrap: wrap; }
 
-      <div class="demo-box">
-        <div>Admin: <b>admin</b> / <b>admin123</b></div>
-        <div>Viewer: <b>user</b> / <b>user123</b></div>
-      </div>
+.app-loader {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  color: var(--text);
+  font-size: 22px;
+}
 
-      <form id="loginForm" class="form-grid one-col">
-        <div>
-          <label>Username</label>
-          <input id="loginUsername" type="text" placeholder="Enter username" autocomplete="username" />
-        </div>
-        <div>
-          <label>Password</label>
-          <input id="loginPassword" type="password" placeholder="Enter password" autocomplete="current-password" />
-        </div>
-        <button type="submit" class="primary-btn">ចូលប្រើប្រាស់</button>
-        <p id="loginError" class="error-text"></p>
-      </form>
-    </div>
-  </section>
+.glass {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+}
 
-  <main id="appView" class="app-shell hidden">
-    <aside class="sidebar">
-      <div class="brand-panel">
-        <img src="./logo.png" alt="School Pay" class="brand-logo large" />
-        <div>
-          <h2>School Pay</h2>
-          <p>PWA Dashboard</p>
-        </div>
-      </div>
+.login-view {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
 
-      <nav class="side-nav">
-        <button class="nav-btn active" data-view="dashboardView">Dashboard</button>
-        <button class="nav-btn" data-view="formView">បញ្ចូលការបង់ប្រាក់</button>
-        <button class="nav-btn" data-view="recordsView">ទិន្នន័យ</button>
-        <button class="nav-btn" data-view="teachersView">របាយការណ៍គ្រូ</button>
-        <button class="nav-btn" data-view="reportsView">របាយការណ៍សង្ខេប</button>
-        <button class="nav-btn" data-view="settingsView">ការកំណត់</button>
-      </nav>
+.login-card {
+  width: min(100%, 460px);
+  border-radius: 28px;
+  padding: 30px;
+}
 
-      <div class="side-footer glass">
-        <div>Role: <span id="userRoleBadge" class="badge"></span></div>
-        <div>User: <span id="currentUserText"></span></div>
-        <button id="logoutBtn" class="ghost-btn full-btn">Logout</button>
-      </div>
-    </aside>
+.brand-row, .brand-panel {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
 
-    <section class="main-content">
-      <header class="topbar glass">
-        <div>
-          <h1 id="pageTitle">Dashboard</h1>
-          <p id="statusText">កំពុងភ្ជាប់ទិន្នន័យ...</p>
-        </div>
-        <div class="topbar-actions">
-          <span id="apiBadge" class="pill">API: Checking...</span>
-          <button id="installBtn" class="ghost-btn hidden">Install App</button>
-          <button id="refreshBtn" class="primary-btn">Refresh</button>
-        </div>
-      </header>
+.brand-logo {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 20px;
+}
+.brand-logo.large {
+  width: 58px;
+  height: 58px;
+}
 
-      <section id="dashboardView" class="view-section">
-        <div class="hero glass">
-          <div>
-            <div class="eyebrow">សូមស្វាគមន៍</div>
-            <h2>ប្រព័ន្ធគ្រប់គ្រងការបង់ប្រាក់សិស្ស</h2>
-            <p>បញ្ចូល កែប្រែ ស្វែងរក និងតាមដានស្ថានភាពបង់ប្រាក់សិស្សបានពី WebApp និង PWA។</p>
-          </div>
-          <div class="hero-actions">
-            <button id="gotoFormBtn" class="primary-btn">បញ្ចូលថ្មី</button>
-            <button id="gotoRecordsBtn" class="ghost-btn">ទិន្នន័យ</button>
-          </div>
-        </div>
+.login-card h1, .brand-panel h2, .topbar h1, .hero h2, .panel h3 { margin: 0; }
+.login-card p, .brand-panel p, .muted, #statusText { color: var(--muted); }
+.demo-box {
+  margin: 18px 0;
+  border-radius: 18px;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1px dashed rgba(255,255,255,0.15);
+  color: var(--muted);
+}
+.demo-box.small { margin-top: 18px; }
+.error-text { color: #ffb4b4; min-height: 20px; }
 
-        <div class="stats-grid">
-          <article class="stat-card glass">
-            <span>ចំនួនគ្រូ</span>
-            <strong id="teacherCount">0</strong>
-          </article>
-          <article class="stat-card glass">
-            <span>ចំនួនកំណត់ត្រា</span>
-            <strong id="recordCount">0</strong>
-          </article>
-          <article class="stat-card glass">
-            <span>សរុបប្រាក់គ្រូ 80%</span>
-            <strong id="total80">0 KHR</strong>
-          </article>
-          <article class="stat-card glass">
-            <span>សរុបប្រាក់សាលា 20%</span>
-            <strong id="total20">0 KHR</strong>
-          </article>
-        </div>
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 320px 1fr;
+}
 
-        <div class="grid-2">
-          <section class="panel glass">
-            <div class="panel-head">
-              <h3>Dashboard Chart</h3>
-              <div class="inline-controls">
-                <select id="chartTypeSelect">
-                  <option value="teacher">តាមគ្រូ</option>
-                  <option value="class">តាមថ្នាក់</option>
-                  <option value="gender">តាមភេទ</option>
-                </select>
-                <button id="refreshChartBtn" class="ghost-btn">Refresh Chart</button>
-              </div>
-            </div>
-            <canvas id="chartCanvas" height="280"></canvas>
-          </section>
+.sidebar {
+  border-right: 1px solid rgba(255,255,255,0.08);
+  padding: 26px 24px;
+  background: linear-gradient(180deg, rgba(4,15,40,0.95), rgba(2,10,28,0.98));
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
 
-          <section class="panel glass">
-            <div class="panel-head">
-              <h3>កំណត់ត្រាចុងក្រោយ</h3>
-            </div>
-            <div id="recentList" class="recent-list"></div>
-          </section>
-        </div>
-      </section>
+.side-nav {
+  display: grid;
+  gap: 12px;
+}
 
-      <section id="formView" class="view-section hidden">
-        <div class="panel glass">
-          <div class="panel-head">
-            <div>
-              <h3 id="formTitle">បញ្ចូលការបង់ប្រាក់ថ្មី</h3>
-              <p id="formSubtitle">Admin អាចបន្ថែម និងកែប្រែទិន្នន័យបាន។</p>
-            </div>
-            <div class="inline-controls">
-              <button id="resetFormBtn" class="ghost-btn">សម្អាត Form</button>
-            </div>
-          </div>
+.nav-btn, .ghost-btn, .primary-btn {
+  border: none;
+  border-radius: 18px;
+  padding: 14px 18px;
+  color: var(--text);
+}
 
-          <form id="recordForm" class="form-grid">
-            <input type="hidden" id="recordId" />
+.nav-btn {
+  background: transparent;
+  text-align: left;
+  border: 1px solid transparent;
+}
+.nav-btn.active,
+.nav-btn:hover {
+  background: rgba(59,130,246,0.16);
+  border-color: rgba(59,130,246,0.45);
+}
 
-            <div>
-              <label>ឈ្មោះសិស្ស</label>
-              <input id="studentName" required />
-            </div>
-            <div>
-              <label>ភេទ</label>
-              <select id="gender">
-                <option value="ប្រុស">ប្រុស</option>
-                <option value="ស្រី">ស្រី</option>
-              </select>
-            </div>
-            <div>
-              <label>ថ្នាក់</label>
-              <input id="studentClass" placeholder="ឧ. G1, A2" />
-            </div>
-            <div>
-              <label>ឈ្មោះគ្រូ</label>
-              <input id="teacherName" list="teacherOptions" placeholder="បញ្ចូលឈ្មោះគ្រូ" />
-              <datalist id="teacherOptions"></datalist>
-            </div>
-            <div>
-              <label>តម្លៃសិក្សា</label>
-              <input id="monthlyFee" type="number" min="0" />
-            </div>
-            <div>
-              <label>ប្រាក់គ្រូ 80%</label>
-              <input id="paid80" type="number" min="0" />
-            </div>
-            <div>
-              <label>ប្រាក់សាលា 20%</label>
-              <input id="paid20" type="number" min="0" />
-            </div>
-            <div>
-              <label>តម្លៃក្នុងមួយថ្ងៃ</label>
-              <input id="dailyPrice" type="number" min="0" />
-            </div>
-            <div>
-              <label>ថ្ងៃចាប់ផ្តើម</label>
-              <input id="startDate" type="date" />
-            </div>
-            <div>
-              <label>ថ្ងៃបង់ប្រាក់</label>
-              <input id="invoiceDate" type="date" />
-            </div>
-            <div>
-              <label>ចំនួនថ្ងៃក្នុង១ខែ</label>
-              <input id="days" type="number" min="1" value="30" />
-            </div>
-            <div class="full-width">
-              <label>កំណត់ចំណាំ</label>
-              <textarea id="note" rows="3" placeholder="សរសេរកំណត់ចំណាំ..."></textarea>
-            </div>
+.primary-btn {
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  box-shadow: 0 14px 32px rgba(37, 99, 235, 0.35);
+}
+.primary-btn:hover { filter: brightness(1.04); }
+.ghost-btn {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.ghost-btn:hover { background: rgba(255,255,255,0.1); }
 
-            <div class="full-width form-actions">
-              <button type="submit" id="saveBtn" class="primary-btn">រក្សាទុក</button>
-              <button type="button" id="cancelEditBtn" class="ghost-btn hidden">បោះបង់ការកែប្រែ</button>
-            </div>
-          </form>
-        </div>
-      </section>
+.side-footer {
+  margin-top: auto;
+  border-radius: 24px;
+  padding: 18px;
+  display: grid;
+  gap: 10px;
+  color: var(--muted);
+}
 
-      <section id="recordsView" class="view-section hidden">
-        <div class="panel glass">
-          <div class="panel-head wrap">
-            <div>
-              <h3>ទិន្នន័យទាំងអស់</h3>
-              <p>ស្វែងរក តម្រង និងកែប្រែបានពីទីនេះ។</p>
-            </div>
-            <div class="inline-controls wrap">
-              <input id="searchInput" placeholder="ស្វែងរកឈ្មោះសិស្ស / គ្រូ / ថ្នាក់" />
-              <select id="teacherFilter"></select>
-              <select id="classFilter"></select>
-              <button id="exportCsvBtn" class="ghost-btn">Export CSV</button>
-            </div>
-          </div>
+.badge, .pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+}
 
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>ឈ្មោះសិស្ស</th>
-                  <th>ភេទ</th>
-                  <th>ថ្នាក់</th>
-                  <th>គ្រូ</th>
-                  <th>តម្លៃ</th>
-                  <th>80%</th>
-                  <th>20%</th>
-                  <th>ថ្ងៃចាប់ផ្តើម</th>
-                  <th>ថ្ងៃបង់</th>
-                  <th>ថ្ងៃ</th>
-                  <th>Note</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="recordsTableBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+.main-content {
+  padding: 24px;
+  display: grid;
+  gap: 20px;
+}
 
-      <section id="teachersView" class="view-section hidden">
-        <div class="panel glass">
-          <div class="panel-head">
-            <h3>របាយការណ៍គ្រូ</h3>
-          </div>
-          <div id="teacherCards" class="teacher-cards"></div>
-        </div>
-      </section>
+.topbar {
+  border-radius: 26px;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.topbar-actions, .inline-controls, .hero-actions, .settings-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.pill { color: var(--muted); }
 
-      <section id="reportsView" class="view-section hidden">
-        <div class="grid-2">
-          <div class="panel glass">
-            <h3>របាយការណ៍តាមថ្នាក់</h3>
-            <div id="classSummary" class="summary-list"></div>
-          </div>
-          <div class="panel glass">
-            <h3>របាយការណ៍តាមភេទ</h3>
-            <div id="genderSummary" class="summary-list"></div>
-          </div>
-        </div>
-      </section>
+.hero {
+  border-radius: 30px;
+  padding: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.eyebrow {
+  color: #8fc3ff;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.hero p { color: var(--muted); max-width: 720px; }
 
-      <section id="settingsView" class="view-section hidden">
-        <div class="panel glass">
-          <h3>ការកំណត់</h3>
-          <div class="settings-grid">
-            <div>
-              <label>Google Apps Script Web App URL</label>
-              <input id="apiUrlInput" placeholder="Paste your deployed Web App URL" />
-              <p class="muted">URL នេះនឹងរក្សាទុកក្នុង browser របស់អ្នក។</p>
-            </div>
-            <div class="settings-actions">
-              <button id="saveSettingsBtn" class="primary-btn">រក្សាទុក URL</button>
-              <button id="clearSettingsBtn" class="ghost-btn">លុប URL</button>
-            </div>
-          </div>
-          <div class="demo-box small">
-            <strong>សុវត្ថិភាព:</strong> Role login នៅ version នេះគឺនៅ frontend សម្រាប់ការប្រើប្រាស់លឿន។
-            បើចង់ឱ្យមានសុវត្ថិភាពពេញលេញ ត្រូវបន្ថែមការផ្ទៀងផ្ទាត់សិទ្ធិនៅ Google Apps Script backend ផងដែរ។
-          </div>
-        </div>
-      </section>
-    </section>
-  </main>
+.stats-grid, .grid-2, .teacher-cards, .settings-grid {
+  display: grid;
+  gap: 20px;
+}
+.stats-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.teacher-cards { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.settings-grid { grid-template-columns: 1fr auto; align-items: end; }
 
-  <script src="./script.js"></script>
-</body>
-</html>
+.stat-card, .panel, .teacher-card, .summary-item {
+  border-radius: 28px;
+  padding: 22px;
+}
+.stat-card span, .summary-item .label { color: var(--muted); }
+.stat-card strong { display: block; font-size: 26px; margin-top: 14px; }
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.panel-head p { margin: 6px 0 0; color: var(--muted); }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.form-grid.one-col { grid-template-columns: 1fr; }
+label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+}
+input, select, textarea {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+  padding: 13px 14px;
+  outline: none;
+}
+input::placeholder, textarea::placeholder { color: #8fa3cf; }
+input:focus, select:focus, textarea:focus {
+  border-color: rgba(59,130,246,0.8);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+.form-actions { display: flex; gap: 12px; }
+
+.table-wrap { overflow: auto; border-radius: 20px; }
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1200px;
+}
+.data-table th, .data-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  text-align: left;
+  vertical-align: top;
+}
+.data-table th {
+  color: #a8c5ff;
+  background: rgba(255,255,255,0.04);
+  position: sticky;
+  top: 0;
+}
+.data-table td small { color: var(--muted); }
+.table-actions { display: flex; gap: 8px; }
+.btn-sm {
+  border: none;
+  border-radius: 12px;
+  padding: 8px 12px;
+  color: white;
+}
+.btn-edit { background: var(--primary); }
+.btn-del { background: var(--danger); }
+.btn-view { background: rgba(255,255,255,0.14); }
+
+.recent-list, .summary-list {
+  display: grid;
+  gap: 12px;
+}
+.recent-item, .summary-item, .teacher-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  padding: 16px;
+}
+.recent-item strong, .teacher-card strong { display: block; margin-bottom: 8px; }
+.muted-row { color: var(--muted); font-size: 14px; }
+.teacher-card .amounts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+.teacher-card .amounts div,
+.summary-item {
+  background: rgba(255,255,255,0.03);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+canvas {
+  width: 100%;
+  background: rgba(3, 10, 22, 0.45);
+  border-radius: 20px;
+}
+
+@media (max-width: 1200px) {
+  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 980px) {
+  .app-shell { grid-template-columns: 1fr; }
+  .sidebar { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .grid-2, .settings-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  .main-content, .sidebar { padding: 16px; }
+  .hero, .topbar { flex-direction: column; align-items: flex-start; }
+  .stats-grid, .form-grid { grid-template-columns: 1fr; }
+  .inline-controls, .hero-actions, .topbar-actions, .form-actions, .settings-actions { flex-wrap: wrap; width: 100%; }
+  .primary-btn, .ghost-btn { width: 100%; }
+}
