@@ -1,23 +1,23 @@
 {
   "id": "/",
-  "name": "School Pay Dashboard",
+  "name": "School Pay Version 2",
   "short_name": "SchoolPay",
-  "description": "PWA Dashboard សម្រាប់គ្រប់គ្រងការបង់ប្រាក់សិស្ស",
-  "start_url": "/",
-  "scope": "/",
+  "description": "PWA dashboard for student payment management with dashboard, records, reports, and role-based UI.",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#071122",
   "theme_color": "#2563eb",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/logo.png",
+      "src": "./logo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/logo.png",
+      "src": "./logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
