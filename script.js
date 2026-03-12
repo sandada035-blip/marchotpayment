@@ -240,10 +240,17 @@ function fillTeacherSelects() {
 }
 
 function renderDashboard() {
-  els.teacherCount.textContent = formatInt(state.summary.teacherCount);
-  els.recordCount.textContent = formatInt(state.summary.recordCount);
-  els.total80.textContent = formatKHR(state.summary.total80);
-  els.total20.textContent = formatKHR(state.summary.total20);
+  // គណនាទឹកប្រាក់សរុបដោយផ្ទាល់ពីទិន្នន័យ Records ទាំងអស់ដែលបានទាញយកមក
+  const calcTotal80 = state.records.reduce((sum, r) => sum + moneyToNumber(r.paid80), 0);
+  const calcTotal20 = state.records.reduce((sum, r) => sum + moneyToNumber(r.paid20), 0);
+
+  // បង្ហាញទិន្នន័យនៅលើ Dashboard
+  els.teacherCount.textContent = formatInt(state.summary.teacherCount || state.teachers.length);
+  els.recordCount.textContent = formatInt(state.summary.recordCount || state.records.length);
+  
+  // ប្រើប្រាស់លទ្ធផលដែលគណនាបានខាងលើ
+  els.total80.textContent = formatKHR(calcTotal80);
+  els.total20.textContent = formatKHR(calcTotal20);
 
   els.teacherList.innerHTML = state.teachers.length
     ? state.teachers.map(t => `
