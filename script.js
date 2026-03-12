@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycby1fD9n9I4zNujCg3OpSEBb834aTHBxjGXj5H4WhA1IpG-BrnZQ5O874q6l7W6xOcpJ7A/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyZjaUVEUSAtfRK8zp069hl_mJdcahd4S7FJ9SXJexOh4ZiZKxbAaRTOP3eUC-L3Q-27A/exec";
 const state = {
   apiUrl: API_URL,
   teachers: [],
