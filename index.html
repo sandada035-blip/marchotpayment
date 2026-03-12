@@ -3,241 +3,234 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>School Pay Dashboard</title>
+  <title>School Pay V2</title>
   <meta name="theme-color" content="#2563eb" />
-  <meta name="description" content="PWA Dashboard សម្រាប់គ្រប់គ្រងការបង់ប្រាក់សិស្ស" />
-
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="SchoolPay" />
-
-  <link rel="manifest" href="/manifest.json" />
-  <link rel="icon" href="/logo.png" />
-  <link rel="apple-touch-icon" href="/logo.png" />
-  <link rel="stylesheet" href="/style.css" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./logo.png" />
+  <link rel="apple-touch-icon" href="./logo.png" />
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-      <div class="brand">
-        <img
-          src="/logo.png"
-          alt="School Pay Logo"
-          class="brand-logo"
-          onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><defs><linearGradient id=%22g%22 x1=%220%22 x2=%221%22 y1=%220%22 y2=%221%22><stop offset=%220%25%22 stop-color=%22%233b82f6%22/><stop offset=%22100%25%22 stop-color=%22%2310b981%22/></linearGradient></defs><rect width=%22128%22 height=%22128%22 rx=%2228%22 fill=%22url(%23g)%22/><text x=%2264%22 y=%2276%22 font-size=%2248%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22>SP</text></svg>';"
-        />
+  <div id="appLoader" class="app-loader">Loading...</div>
+
+  <section id="loginView" class="login-view hidden">
+    <div class="login-card glass">
+      <div class="brand-row">
+        <img src="./logo.png" alt="School Pay" class="brand-logo" />
         <div>
           <h1>School Pay</h1>
+          <p>PWA Dashboard Version 2</p>
+        </div>
+      </div>
+
+      <div class="demo-box">
+        <div>Admin: <b>admin</b> / <b>admin123</b></div>
+        <div>Viewer: <b>user</b> / <b>user123</b></div>
+      </div>
+
+      <form id="loginForm" class="form-grid one-col">
+        <div>
+          <label>Username</label>
+          <input id="loginUsername" type="text" placeholder="Enter username" autocomplete="username" />
+        </div>
+        <div>
+          <label>Password</label>
+          <input id="loginPassword" type="password" placeholder="Enter password" autocomplete="current-password" />
+        </div>
+        <button type="submit" class="primary-btn">ចូលប្រើប្រាស់</button>
+        <p id="loginError" class="error-text"></p>
+      </form>
+    </div>
+  </section>
+
+  <main id="appView" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="brand-panel">
+        <img src="./logo.png" alt="School Pay" class="brand-logo large" />
+        <div>
+          <h2>School Pay</h2>
           <p>PWA Dashboard</p>
         </div>
       </div>
 
-      <nav class="nav">
-        <button class="nav-btn active" data-view="dashboard">Dashboard</button>
-        <button class="nav-btn" data-view="payments">បញ្ចូលការបង់ប្រាក់</button>
-        <button class="nav-btn" data-view="records">កែទិន្នន័យ</button>
-        <button class="nav-btn" data-view="reports">របាយការណ៍ប្រចាំថ្ងៃ</button>
-        <button class="nav-btn" data-view="monthly">របាយការណ៍ប្រចាំខែ</button>
+      <nav class="side-nav">
+        <button class="nav-btn active" data-view="dashboardView">Dashboard</button>
+        <button class="nav-btn" data-view="formView">បញ្ចូលការបង់ប្រាក់</button>
+        <button class="nav-btn" data-view="recordsView">ទិន្នន័យ</button>
+        <button class="nav-btn" data-view="teachersView">របាយការណ៍គ្រូ</button>
+        <button class="nav-btn" data-view="reportsView">របាយការណ៍សង្ខេប</button>
+        <button class="nav-btn" data-view="settingsView">ការកំណត់</button>
       </nav>
 
-      <div class="sidebar-footer">
-        <button id="installBtn" class="ghost-btn hidden">Install App</button>
-        <small>PWA + GitHub + Vercel + Google Sheets</small>
+      <div class="side-footer glass">
+        <div>Role: <span id="userRoleBadge" class="badge"></span></div>
+        <div>User: <span id="currentUserText"></span></div>
+        <button id="logoutBtn" class="ghost-btn full-btn">Logout</button>
       </div>
     </aside>
 
-    <main class="main">
-      <header class="topbar">
+    <section class="main-content">
+      <header class="topbar glass">
         <div>
-          <button class="menu-btn" id="menuBtn">☰</button>
-          <h2 id="pageTitle">Dashboard</h2>
+          <h1 id="pageTitle">Dashboard</h1>
+          <p id="statusText">កំពុងភ្ជាប់ទិន្នន័យ...</p>
         </div>
-
         <div class="topbar-actions">
-          <span class="status-pill" id="apiStatus">API: Ready</span>
-          <button class="primary-btn" id="refreshBtn">Refresh</button>
+          <span id="apiBadge" class="pill">API: Checking...</span>
+          <button id="installBtn" class="ghost-btn hidden">Install App</button>
+          <button id="refreshBtn" class="primary-btn">Refresh</button>
         </div>
       </header>
 
-      <!-- Dashboard -->
-      <section class="view active" id="dashboardView">
-        <div class="hero-card">
+      <section id="dashboardView" class="view-section">
+        <div class="hero glass">
           <div>
-            <p class="eyebrow">សូមស្វាគមន៍</p>
-            <h3>ផ្ទាំងគ្រប់គ្រងការបង់ប្រាក់សិស្ស</h3>
-            <p class="muted">
-              បញ្ចូល កែសម្រួល ស្វែងរក បោះពុម្ពរបាយការណ៍ និងតាមដានស្ថិតិការបង់ប្រាក់សិស្ស។
-            </p>
+            <div class="eyebrow">សូមស្វាគមន៍</div>
+            <h2>ប្រព័ន្ធគ្រប់គ្រងការបង់ប្រាក់សិស្ស</h2>
+            <p>បញ្ចូល កែប្រែ ស្វែងរក និងតាមដានស្ថានភាពបង់ប្រាក់សិស្សបានពី WebApp និង PWA។</p>
           </div>
-
           <div class="hero-actions">
-            <button class="primary-btn" data-go="payments">បញ្ចូលថ្មី</button>
-            <button class="secondary-btn" data-go="records">កែទិន្នន័យ</button>
+            <button id="gotoFormBtn" class="primary-btn">បញ្ចូលថ្មី</button>
+            <button id="gotoRecordsBtn" class="ghost-btn">ទិន្នន័យ</button>
           </div>
         </div>
 
         <div class="stats-grid">
-          <div class="stat-card">
+          <article class="stat-card glass">
             <span>ចំនួនគ្រូ</span>
             <strong id="teacherCount">0</strong>
-          </div>
-
-          <div class="stat-card">
+          </article>
+          <article class="stat-card glass">
             <span>ចំនួនកំណត់ត្រា</span>
             <strong id="recordCount">0</strong>
-          </div>
-
-          <div class="stat-card">
+          </article>
+          <article class="stat-card glass">
             <span>សរុបប្រាក់គ្រូ 80%</span>
-            <strong id="total80">0</strong>
-          </div>
-
-          <div class="stat-card">
+            <strong id="total80">0 KHR</strong>
+          </article>
+          <article class="stat-card glass">
             <span>សរុបប្រាក់សាលា 20%</span>
-            <strong id="total20">0</strong>
-          </div>
+            <strong id="total20">0 KHR</strong>
+          </article>
         </div>
 
-        <div class="panel">
-          <div class="panel-head filter-head">
-            <h3>Dashboard Chart</h3>
-
-            <div class="filter-row">
-              <select id="chartType" class="dark-select">
-                <option value="teacher">តាមគ្រូ</option>
-                <option value="daily">តាមថ្ងៃបង់</option>
-              </select>
-
-              <select id="chartMetric" class="dark-select">
-                <option value="monthlyFee">តម្លៃសិក្សា</option>
-                <option value="paid80">ប្រាក់គ្រូ 80%</option>
-                <option value="paid20">ប្រាក់សាលា 20%</option>
-                <option value="count">ចំនួនសិស្ស</option>
-              </select>
-
-              <button class="secondary-btn" id="refreshChartBtn">Refresh Chart</button>
-            </div>
-          </div>
-
-          <div style="background:#ffffff;border-radius:18px;padding:16px;">
-            <canvas id="dashboardChart" height="100"></canvas>
-          </div>
-        </div>
-
-        <div class="panel-grid" style="margin-top:18px;">
-          <section class="panel">
+        <div class="grid-2">
+          <section class="panel glass">
             <div class="panel-head">
-              <h3>Teacher Sheets</h3>
+              <h3>Dashboard Chart</h3>
+              <div class="inline-controls">
+                <select id="chartTypeSelect">
+                  <option value="teacher">តាមគ្រូ</option>
+                  <option value="class">តាមថ្នាក់</option>
+                  <option value="gender">តាមភេទ</option>
+                </select>
+                <button id="refreshChartBtn" class="ghost-btn">Refresh Chart</button>
+              </div>
             </div>
-            <div id="teacherList" class="teacher-list"></div>
+            <canvas id="chartCanvas" height="280"></canvas>
           </section>
 
-          <section class="panel">
+          <section class="panel glass">
             <div class="panel-head">
               <h3>កំណត់ត្រាចុងក្រោយ</h3>
             </div>
-            <div id="recentRecords" class="recent-list"></div>
+            <div id="recentList" class="recent-list"></div>
           </section>
         </div>
       </section>
 
-      <!-- Payment Form -->
-      <section class="view" id="paymentsView">
-        <div class="panel">
+      <section id="formView" class="view-section hidden">
+        <div class="panel glass">
           <div class="panel-head">
-            <h3>បញ្ចូលការបង់ប្រាក់សិស្ស</h3>
+            <div>
+              <h3 id="formTitle">បញ្ចូលការបង់ប្រាក់ថ្មី</h3>
+              <p id="formSubtitle">Admin អាចបន្ថែម និងកែប្រែទិន្នន័យបាន។</p>
+            </div>
+            <div class="inline-controls">
+              <button id="resetFormBtn" class="ghost-btn">សម្អាត Form</button>
+            </div>
           </div>
 
-          <form id="paymentForm" class="form-grid">
+          <form id="recordForm" class="form-grid">
             <input type="hidden" id="recordId" />
 
-            <div class="field">
-              <label for="studentName">ឈ្មោះសិស្ស</label>
-              <input id="studentName" name="studentName" type="text" required />
+            <div>
+              <label>ឈ្មោះសិស្ស</label>
+              <input id="studentName" required />
             </div>
-
-            <div class="field">
-              <label for="gender">ភេទ</label>
-              <select id="gender" name="gender" required class="dark-select">
-                <option value="">ជ្រើសរើស</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
+            <div>
+              <label>ភេទ</label>
+              <select id="gender">
+                <option value="ប្រុស">ប្រុស</option>
+                <option value="ស្រី">ស្រី</option>
               </select>
             </div>
-
-            <div class="field">
-              <label for="studentClass">ថ្នាក់</label>
-              <input id="studentClass" name="studentClass" type="text" placeholder="ឧ. ថ្នាក់ទី១, Grade 5, A1" />
+            <div>
+              <label>ថ្នាក់</label>
+              <input id="studentClass" placeholder="ឧ. G1, A2" />
+            </div>
+            <div>
+              <label>ឈ្មោះគ្រូ</label>
+              <input id="teacherName" list="teacherOptions" placeholder="បញ្ចូលឈ្មោះគ្រូ" />
+              <datalist id="teacherOptions"></datalist>
+            </div>
+            <div>
+              <label>តម្លៃសិក្សា</label>
+              <input id="monthlyFee" type="number" min="0" />
+            </div>
+            <div>
+              <label>ប្រាក់គ្រូ 80%</label>
+              <input id="paid80" type="number" min="0" />
+            </div>
+            <div>
+              <label>ប្រាក់សាលា 20%</label>
+              <input id="paid20" type="number" min="0" />
+            </div>
+            <div>
+              <label>តម្លៃក្នុងមួយថ្ងៃ</label>
+              <input id="dailyPrice" type="number" min="0" />
+            </div>
+            <div>
+              <label>ថ្ងៃចាប់ផ្តើម</label>
+              <input id="startDate" type="date" />
+            </div>
+            <div>
+              <label>ថ្ងៃបង់ប្រាក់</label>
+              <input id="invoiceDate" type="date" />
+            </div>
+            <div>
+              <label>ចំនួនថ្ងៃក្នុង១ខែ</label>
+              <input id="days" type="number" min="1" value="30" />
+            </div>
+            <div class="full-width">
+              <label>កំណត់ចំណាំ</label>
+              <textarea id="note" rows="3" placeholder="សរសេរកំណត់ចំណាំ..."></textarea>
             </div>
 
-            <div class="field">
-              <label for="teacherName">ឈ្មោះគ្រូ / Sheet</label>
-              <select id="teacherName" name="teacherName" required class="dark-select">
-                <option value="">ជ្រើសរើសគ្រូ</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="monthlyFee">តម្លៃសិក្សា</label>
-              <input id="monthlyFee" name="monthlyFee" type="number" min="0" required />
-            </div>
-
-            <div class="field">
-              <label for="paid80">ប្រាក់គ្រូ 80%</label>
-              <input id="paid80" name="paid80" type="number" min="0" />
-            </div>
-
-            <div class="field">
-              <label for="paid20">ប្រាក់សាលា 20%</label>
-              <input id="paid20" name="paid20" type="number" min="0" />
-            </div>
-
-            <div class="field">
-              <label for="dailyPrice">តម្លៃក្នុងមួយថ្ងៃ</label>
-              <input id="dailyPrice" name="dailyPrice" type="number" min="0" />
-            </div>
-
-            <div class="field">
-              <label for="startDate">ថ្ងៃចាប់ផ្តើម</label>
-              <input id="startDate" name="startDate" type="date" />
-            </div>
-
-            <div class="field">
-              <label for="invoiceDate">ថ្ងៃបង់ប្រាក់</label>
-              <input id="invoiceDate" name="invoiceDate" type="date" />
-            </div>
-
-            <div class="field">
-              <label for="days">ចំនួនថ្ងៃក្នុង១ខែ</label>
-              <input id="days" name="days" type="number" min="0" value="30" />
-            </div>
-
-            <div class="field full">
-              <label for="note">សម្គាល់</label>
-              <textarea id="note" name="note" rows="3"></textarea>
-            </div>
-
-            <div class="form-actions full">
-              <button type="button" class="secondary-btn" id="resetFormBtn">សម្អាត</button>
-              <button type="submit" class="primary-btn" id="submitBtn">រក្សាទុក</button>
+            <div class="full-width form-actions">
+              <button type="submit" id="saveBtn" class="primary-btn">រក្សាទុក</button>
+              <button type="button" id="cancelEditBtn" class="ghost-btn hidden">បោះបង់ការកែប្រែ</button>
             </div>
           </form>
         </div>
       </section>
 
-      <!-- Records -->
-      <section class="view" id="recordsView">
-        <div class="panel">
-          <div class="panel-head filter-head">
-            <h3>កែទិន្នន័យលើ Web App</h3>
-
-            <div class="filter-row">
-              <select id="filterTeacher" class="dark-select">
-                <option value="">គ្រូទាំងអស់</option>
-              </select>
-
-              <input type="text" id="searchInput" placeholder="ស្វែងរកឈ្មោះសិស្ស..." />
+      <section id="recordsView" class="view-section hidden">
+        <div class="panel glass">
+          <div class="panel-head wrap">
+            <div>
+              <h3>ទិន្នន័យទាំងអស់</h3>
+              <p>ស្វែងរក តម្រង និងកែប្រែបានពីទីនេះ។</p>
+            </div>
+            <div class="inline-controls wrap">
+              <input id="searchInput" placeholder="ស្វែងរកឈ្មោះសិស្ស / គ្រូ / ថ្នាក់" />
+              <select id="teacherFilter"></select>
+              <select id="classFilter"></select>
+              <button id="exportCsvBtn" class="ghost-btn">Export CSV</button>
             </div>
           </div>
 
@@ -249,11 +242,14 @@
                   <th>ភេទ</th>
                   <th>ថ្នាក់</th>
                   <th>គ្រូ</th>
-                  <th>តម្លៃសិក្សា</th>
+                  <th>តម្លៃ</th>
                   <th>80%</th>
                   <th>20%</th>
+                  <th>ថ្ងៃចាប់ផ្តើម</th>
                   <th>ថ្ងៃបង់</th>
-                  <th>Actions</th>
+                  <th>ថ្ងៃ</th>
+                  <th>Note</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody id="recordsTableBody"></tbody>
@@ -262,131 +258,51 @@
         </div>
       </section>
 
-      <!-- Daily Report -->
-      <section class="view" id="reportsView">
-        <div class="panel">
-          <div class="panel-head filter-head">
-            <h3>របាយការណ៍ប្រចាំថ្ងៃ</h3>
-
-            <div class="filter-row">
-              <input type="date" id="reportDate" />
-
-              <select id="reportTeacher" class="dark-select">
-                <option value="">គ្រូទាំងអស់</option>
-              </select>
-
-              <button class="secondary-btn" id="previewReportBtn">Preview</button>
-              <button class="primary-btn" id="printDailyBtn">Print Daily Report</button>
-            </div>
+      <section id="teachersView" class="view-section hidden">
+        <div class="panel glass">
+          <div class="panel-head">
+            <h3>របាយការណ៍គ្រូ</h3>
           </div>
+          <div id="teacherCards" class="teacher-cards"></div>
+        </div>
+      </section>
 
-          <div class="stats-grid report-stats">
-            <div class="stat-card">
-              <span>ចំនួនសិស្ស</span>
-              <strong id="reportCount">0</strong>
-            </div>
-
-            <div class="stat-card">
-              <span>សរុបតម្លៃសិក្សា</span>
-              <strong id="reportMonthlyFee">0</strong>
-            </div>
-
-            <div class="stat-card">
-              <span>សរុបប្រាក់គ្រូ 80%</span>
-              <strong id="report80">0</strong>
-            </div>
-
-            <div class="stat-card">
-              <span>សរុបប្រាក់សាលា 20%</span>
-              <strong id="report20">0</strong>
-            </div>
+      <section id="reportsView" class="view-section hidden">
+        <div class="grid-2">
+          <div class="panel glass">
+            <h3>របាយការណ៍តាមថ្នាក់</h3>
+            <div id="classSummary" class="summary-list"></div>
           </div>
-
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>ឈ្មោះសិស្ស</th>
-                  <th>ភេទ</th>
-                  <th>ថ្នាក់</th>
-                  <th>គ្រូ</th>
-                  <th>តម្លៃសិក្សា</th>
-                  <th>80%</th>
-                  <th>20%</th>
-                  <th>ថ្ងៃបង់</th>
-                </tr>
-              </thead>
-              <tbody id="reportTableBody"></tbody>
-            </table>
+          <div class="panel glass">
+            <h3>របាយការណ៍តាមភេទ</h3>
+            <div id="genderSummary" class="summary-list"></div>
           </div>
         </div>
       </section>
 
-      <!-- Monthly Report -->
-      <section class="view" id="monthlyView">
-        <div class="panel">
-          <div class="panel-head filter-head">
-            <h3>របាយការណ៍ប្រចាំខែ</h3>
-
-            <div class="filter-row">
-              <input type="month" id="monthlyReportMonth" />
-
-              <select id="monthlyTeacher" class="dark-select">
-                <option value="">គ្រូទាំងអស់</option>
-              </select>
-
-              <button class="secondary-btn" id="previewMonthlyBtn">Preview</button>
-              <button class="primary-btn" id="printMonthlyBtn">Print Monthly Report</button>
+      <section id="settingsView" class="view-section hidden">
+        <div class="panel glass">
+          <h3>ការកំណត់</h3>
+          <div class="settings-grid">
+            <div>
+              <label>Google Apps Script Web App URL</label>
+              <input id="apiUrlInput" placeholder="Paste your deployed Web App URL" />
+              <p class="muted">URL នេះនឹងរក្សាទុកក្នុង browser របស់អ្នក។</p>
+            </div>
+            <div class="settings-actions">
+              <button id="saveSettingsBtn" class="primary-btn">រក្សាទុក URL</button>
+              <button id="clearSettingsBtn" class="ghost-btn">លុប URL</button>
             </div>
           </div>
-
-          <div class="stats-grid report-stats">
-            <div class="stat-card">
-              <span>ចំនួនសិស្ស</span>
-              <strong id="monthlyCount">0</strong>
-            </div>
-
-            <div class="stat-card">
-              <span>សរុបតម្លៃសិក្សា</span>
-              <strong id="monthlyFeeTotal">0</strong>
-            </div>
-
-            <div class="stat-card">
-              <span>សរុបប្រាក់គ្រូ 80%</span>
-              <strong id="monthly80">0</strong>
-            </div>
-
-            <div class="stat-card">
-              <span>សរុបប្រាក់សាលា 20%</span>
-              <strong id="monthly20">0</strong>
-            </div>
-          </div>
-
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>ឈ្មោះសិស្ស</th>
-                  <th>ភេទ</th>
-                  <th>ថ្នាក់</th>
-                  <th>គ្រូ</th>
-                  <th>តម្លៃសិក្សា</th>
-                  <th>80%</th>
-                  <th>20%</th>
-                  <th>ថ្ងៃបង់</th>
-                </tr>
-              </thead>
-              <tbody id="monthlyTableBody"></tbody>
-            </table>
+          <div class="demo-box small">
+            <strong>សុវត្ថិភាព:</strong> Role login នៅ version នេះគឺនៅ frontend សម្រាប់ការប្រើប្រាស់លឿន។
+            បើចង់ឱ្យមានសុវត្ថិភាពពេញលេញ ត្រូវបន្ថែមការផ្ទៀងផ្ទាត់សិទ្ធិនៅ Google Apps Script backend ផងដែរ។
           </div>
         </div>
       </section>
-    </main>
-  </div>
+    </section>
+  </main>
 
-  <div id="toast" class="toast"></div>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="script.js"></script>
+  <script src="./script.js"></script>
 </body>
 </html>
