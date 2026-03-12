@@ -1,12 +1,11 @@
-const CACHE_NAME = "student-payment-pwa-v4";
+const CACHE_NAME = "school-pay-pwa-v4";
 const ASSETS = [
   "./",
   "./index.html",
   "./style.css",
   "./script.js",
   "./manifest.json",
-  "./logo.png",
-  "https://cdn.jsdelivr.net/npm/chart.js"
+  "./logo.png"
 ];
 
 self.addEventListener("install", event => {
@@ -28,13 +27,12 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
 
-  // IMPORTANT FIX: Do NOT cache Google Apps Script API calls
-  if (event.request.url.includes("script.google.com")) {
+  // កែតម្រូវសំខាន់: ការពារមិនឲ្យ Service Worker ចាប់យកទិន្នន័យ API ទុកក្នុង Cache ទេ (ត្រូវទាញថ្មីជានិច្ច)
+  if (event.request.url.includes("script.google.com") || event.request.url.includes("script.googleusercontent.com")) {
     event.respondWith(fetch(event.request));
     return;
   }
 
-  // Standard cache-first strategy for app shell assets
   event.respondWith(
     caches.match(event.request).then(cached => {
       return cached || fetch(event.request).then(response => {
