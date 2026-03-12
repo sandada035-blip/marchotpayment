@@ -1,13 +1,8 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbyZjaUVEUSAtfRK8zp069hl_mJdcahd4S7FJ9SXJexOh4ZiZKxbAaRTOP3eUC-L3Q-27A/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby1fD9n9I4zNujCg3OpSEBb834aTHBxjGXj5H4WhA1IpG-BrnZQ5O874q6l7W6xOcpJ7A/exec";
 const state = {
   apiUrl: API_URL,
   teachers: [],
-  summary: {
-    teacherCount: 0,
-    recordCount: 0,
-    total80: 0,
-    total20: 0
-  },
+  summary: { teacherCount: 0, recordCount: 0, total80: 0, total20: 0 },
   recent: [],
   records: [],
   reportRows: [],
@@ -240,17 +235,10 @@ function fillTeacherSelects() {
 }
 
 function renderDashboard() {
-  // គណនាទឹកប្រាក់សរុបដោយផ្ទាល់ពីទិន្នន័យ Records ទាំងអស់ដែលបានទាញយកមក
-  const calcTotal80 = state.records.reduce((sum, r) => sum + moneyToNumber(r.paid80), 0);
-  const calcTotal20 = state.records.reduce((sum, r) => sum + moneyToNumber(r.paid20), 0);
-
-  // បង្ហាញទិន្នន័យនៅលើ Dashboard
-  els.teacherCount.textContent = formatInt(state.summary.teacherCount || state.teachers.length);
-  els.recordCount.textContent = formatInt(state.summary.recordCount || state.records.length);
-  
-  // ប្រើប្រាស់លទ្ធផលដែលគណនាបានខាងលើ
-  els.total80.textContent = formatKHR(calcTotal80);
-  els.total20.textContent = formatKHR(calcTotal20);
+  els.teacherCount.textContent = formatInt(state.summary.teacherCount);
+  els.recordCount.textContent = formatInt(state.summary.recordCount);
+  els.total80.textContent = formatKHR(state.summary.total80);
+  els.total20.textContent = formatKHR(state.summary.total20);
 
   els.teacherList.innerHTML = state.teachers.length
     ? state.teachers.map(t => `
@@ -270,7 +258,7 @@ function renderDashboard() {
         <strong>${escapeHtml(r.studentName || "")}</strong>
         <div class="muted">${escapeHtml(r.teacherName || "")}</div>
         <div>${formatKHR(r.monthlyFee)} | 80%: ${formatKHR(r.paid80)} | 20%: ${formatKHR(r.paid20)}</div>
-        <div class="muted">ថ្នាក់: ${escapeHtml(r.studentClass || "")} | ថ្ងៃបង់: ${escapeHtml(normalizeDate(r.invoiceDate) || "")}</div>
+        <div class="muted">ថ្នាក់: ${escapeHtml(r.studentClass || "")} | ថ្ងៃបង់: ${escapeHtml(r.invoiceDate || "")}</div>
       </div>
     `).join("")
     : `<div class="recent-item">មិនទាន់មានកំណត់ត្រា</div>`;
@@ -302,7 +290,7 @@ function renderRecordsTable() {
         <td>${formatKHR(r.monthlyFee)}</td>
         <td>${formatKHR(r.paid80)}</td>
         <td>${formatKHR(r.paid20)}</td>
-        <td>${escapeHtml(normalizeDate(r.invoiceDate) || "")}</td>
+        <td>${escapeHtml(r.invoiceDate || "")}</td>
         <td>
           <div class="table-actions">
             <button class="small-btn edit-btn" onclick="editRecord('${escapeJs(r.recordId)}')">Edit</button>
@@ -353,7 +341,7 @@ function previewDailyReport() {
           <td>${formatKHR(r.monthlyFee)}</td>
           <td>${formatKHR(r.paid80)}</td>
           <td>${formatKHR(r.paid20)}</td>
-          <td>${escapeHtml(normalizeDate(r.invoiceDate) || "")}</td>
+          <td>${escapeHtml(r.invoiceDate || "")}</td>
         </tr>
       `).join("")
       : `<tr><td colspan="8">មិនមានទិន្នន័យសម្រាប់ថ្ងៃនេះ</td></tr>`;
@@ -401,7 +389,7 @@ function previewMonthlyReport() {
           <td>${formatKHR(r.monthlyFee)}</td>
           <td>${formatKHR(r.paid80)}</td>
           <td>${formatKHR(r.paid20)}</td>
-          <td>${escapeHtml(normalizeDate(r.invoiceDate) || "")}</td>
+          <td>${escapeHtml(r.invoiceDate || "")}</td>
         </tr>
       `).join("")
       : `<tr><td colspan="8">មិនមានទិន្នន័យសម្រាប់ខែនេះ</td></tr>`;
@@ -518,7 +506,7 @@ function printDailyReport() {
                 <td>${formatKHR(r.monthlyFee)}</td>
                 <td>${formatKHR(r.paid80)}</td>
                 <td>${formatKHR(r.paid20)}</td>
-                <td>${escapeHtml(normalizeDate(r.invoiceDate) || "")}</td>
+                <td>${escapeHtml(r.invoiceDate || "")}</td>
               </tr>
             `).join("")}
           </tbody>
@@ -598,7 +586,7 @@ function printMonthlyReport() {
                 <td>${formatKHR(r.monthlyFee)}</td>
                 <td>${formatKHR(r.paid80)}</td>
                 <td>${formatKHR(r.paid20)}</td>
-                <td>${escapeHtml(normalizeDate(r.invoiceDate) || "")}</td>
+                <td>${escapeHtml(r.invoiceDate || "")}</td>
               </tr>
             `).join("")}
           </tbody>
@@ -644,8 +632,8 @@ window.exportInvoicePdf = function(recordId) {
             <tr><th>តម្លៃសិក្សា</th><td>${formatKHR(r.monthlyFee)}</td></tr>
             <tr><th>ប្រាក់គ្រូ 80%</th><td>${formatKHR(r.paid80)}</td></tr>
             <tr><th>ប្រាក់សាលា 20%</th><td>${formatKHR(r.paid20)}</td></tr>
-            <tr><th>ថ្ងៃចាប់ផ្តើម</th><td>${escapeHtml(normalizeDate(r.startDate) || "")}</td></tr>
-            <tr><th>ថ្ងៃបង់ប្រាក់</th><td>${escapeHtml(normalizeDate(r.invoiceDate) || "")}</td></tr>
+            <tr><th>ថ្ងៃចាប់ផ្តើម</th><td>${escapeHtml(r.startDate || "")}</td></tr>
+            <tr><th>ថ្ងៃបង់ប្រាក់</th><td>${escapeHtml(r.invoiceDate || "")}</td></tr>
             <tr><th>ចំនួនថ្ងៃ</th><td>${escapeHtml(String(r.days || ""))}</td></tr>
           </table>
         </div>
@@ -762,12 +750,14 @@ window.editRecord = function(recordId) {
   document.getElementById("gender").value = r.gender || "";
   document.getElementById("studentClass").value = r.studentClass || "";
   document.getElementById("teacherName").value = r.teacherName || "";
-  document.getElementById("monthlyFee").value = r.monthlyFee || "";
-  document.getElementById("paid80").value = r.paid80 || "";
-  document.getElementById("paid20").value = r.paid20 || "";
+  
+  // កែតម្រូវ: បម្លែងទៅជាលេខសុទ្ធ ដើម្បីឲ្យ Input <type="number"> អាចទទួលយកបាន
+  document.getElementById("monthlyFee").value = r.monthlyFee !== undefined ? moneyToNumber(r.monthlyFee) : "";
+  document.getElementById("paid80").value = r.paid80 !== undefined ? moneyToNumber(r.paid80) : "";
+  document.getElementById("paid20").value = r.paid20 !== undefined ? moneyToNumber(r.paid20) : "";
 
   const dailyPriceEl = document.getElementById("dailyPrice");
-  if (dailyPriceEl) dailyPriceEl.value = r.dailyPrice || "";
+  if (dailyPriceEl) dailyPriceEl.value = r.dailyPrice !== undefined ? moneyToNumber(r.dailyPrice) : "";
 
   document.getElementById("startDate").value = normalizeDate(r.startDate) || "";
   document.getElementById("invoiceDate").value = normalizeDate(r.invoiceDate) || "";
@@ -801,9 +791,7 @@ window.deleteRecord = async function(recordId) {
 };
 
 async function apiGet(queryString) {
-  // Adding cache-busting timestamp to bypass hard browser caching
-  const t = new Date().getTime();
-  const url = `${state.apiUrl}${state.apiUrl.includes("?") ? "&" : "?"}${queryString}&t=${t}`;
+  const url = `${state.apiUrl}${state.apiUrl.includes("?") ? "&" : "?"}${queryString}`;
   const res = await fetch(url, { method: "GET" });
   if (!res.ok) throw new Error("API GET error");
   return res.json();
@@ -846,9 +834,7 @@ function formatInt(value) {
 
 function normalizeDate(value) {
   if (!value) return "";
-  // Check if it's already a clean string yyyy-mm-dd
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.slice(0,10))) return value.slice(0,10);
-  
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return String(value).trim();
   return d.toISOString().slice(0, 10);
