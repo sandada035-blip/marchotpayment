@@ -1,8 +1,6 @@
 {
-  "id": "./index.html",
   "name": "School Pay Version 4",
   "short_name": "SchoolPay",
-  "description": "Single page PWA for School Pay with Google Apps Script backend.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
@@ -12,14 +10,12 @@
     {
       "src": "./logo.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
       "src": "./logo.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
   ]
 }
